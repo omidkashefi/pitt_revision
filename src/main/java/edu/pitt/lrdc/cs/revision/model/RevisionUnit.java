@@ -22,17 +22,17 @@ public class RevisionUnit {
 	private ArrayList<Integer> oldSentenceIndex = new ArrayList<Integer>(); // index of the sentence in the old draft
 	private ArrayList<Integer> newSentenceIndex = new ArrayList<Integer>(); // index of the sentence in the new draft
 
-	private ArrayList<Integer> oldParagraphNo = new ArrayList<Integer>(); //index of the paragraph of the sentence in the old draft
-	private ArrayList<Integer> newParagraphNo = new ArrayList<Integer>(); //index of the paragraph of the sentence in the new draft
+	private ArrayList<Integer> oldParagraphNo = new ArrayList<Integer>(); // index of the paragraph of the sentence in
+																			// the old draft
+	private ArrayList<Integer> newParagraphNo = new ArrayList<Integer>(); // index of the paragraph of the sentence in
+																			// the new draft
 
-	
-	
 	private String oldSentence; // content of the sentence in the old draft
 	private String newSentence; // content of the sentence in the new draft;
 
 	// Revision operation and revision purpose
 	private int revision_op = -1; // revision operation
-	private int revision_purpose = -1; // revision purpose
+	private int revision_purpose = RevisionPurpose.UNANNOTATED; // revision purpose
 
 	private int revision_index;// Well, we need this attribute _(:3ã€�âˆ )
 	private int revision_level;// Well, we need this too _(:3ã€�âˆ )
@@ -43,6 +43,8 @@ public class RevisionUnit {
 	private RevisionUnit root; // pointer to the ultra root node (Not the parent)
 
 	private ArrayList<RevisionUnit> units = new ArrayList<RevisionUnit>();
+
+	private ArrayList<SubsententialRevisionUnit> subsententialUnits = new ArrayList<SubsententialRevisionUnit>();
 
 	/**
 	 * This attribute is needed for the GUI annotation tool
@@ -74,8 +76,7 @@ public class RevisionUnit {
 		if (isRoot) {
 			this.isRoot = true;
 		} else {
-			throw new Exception(
-					"Non-root units must be created with other constructors");
+			throw new Exception("Non-root units must be created with other constructors");
 		}
 	}
 
@@ -87,8 +88,8 @@ public class RevisionUnit {
 	 * @param revisionOp
 	 * @param revisionPurpose
 	 */
-	public RevisionUnit(ArrayList<Integer> oldSentenceIndex, ArrayList<Integer> newSentenceIndex,
-			int revisionOp, int revisionPurpose, RevisionUnit root) {
+	public RevisionUnit(ArrayList<Integer> oldSentenceIndex, ArrayList<Integer> newSentenceIndex, int revisionOp,
+			int revisionPurpose, RevisionUnit root) {
 		this.oldSentenceIndex = oldSentenceIndex;
 		this.newSentenceIndex = newSentenceIndex;
 		this.revision_op = revisionOp;
@@ -259,6 +260,27 @@ public class RevisionUnit {
 		this.units.add(unit);
 	}
 
+	public void addSubsententialUnit(SubsententialRevisionUnit unit) {
+		this.subsententialUnits.add(unit);
+	}
+
+	public void removeSubsententialUnit(SubsententialRevisionUnit rmUnit) {
+		this.subsententialUnits.remove(rmUnit);
+	}
+
+	public ArrayList<SubsententialRevisionUnit> getSubsententialUnits() {
+		return this.subsententialUnits;
+	}
+
+	public void setSubsententialUnits(ArrayList<SubsententialRevisionUnit> ssu) {
+		this.clearSubsententialUnits();
+		this.subsententialUnits.addAll(ssu);
+	}
+
+	public void clearSubsententialUnits() {
+		this.subsententialUnits.clear();
+	}
+
 	public String getOldSentence() {
 		return oldSentence;
 	}
@@ -275,23 +297,10 @@ public class RevisionUnit {
 		this.newSentence = newSentence;
 	}
 
-	public String toStringBrief() {
-		String oldIndexStr = "";
-		String newIndexStr = "";
-		for(Integer oldIndex: this.oldSentenceIndex) {
-			oldIndexStr += oldIndex + ",";
-		}
-		for(Integer newIndex: this.newSentenceIndex) {
-			newIndexStr += newIndex + ",";
-		}
-		String msg = "OLD: "+ oldIndexStr + " NEW: " + newIndexStr + RevisionPurpose.getPurposeName(this.revision_purpose); 
-		return msg;
-	}
-	
+	@Override
 	public String toString() {
 		String msg = "Level " + this.revision_level + ":\n";
-		String revPurpose = RevisionPurpose
-				.getPurposeName(this.revision_purpose);
+		String revPurpose = RevisionPurpose.getPurposeName(this.revision_purpose);
 		if (this.revision_op == RevisionOp.ADD) {
 			msg += "Adding (a/an) " + revPurpose;
 		} else if (this.revision_op == RevisionOp.DELETE) {
@@ -299,18 +308,18 @@ public class RevisionUnit {
 		} else if (this.revision_op == RevisionOp.MODIFY) {
 			msg += "Change (a/an) " + revPurpose;
 		} else if (this.revision_op == RevisionOp.NOCHANGE) {
-			msg += "Change the elements of (a/an) " + revPurpose
-					+ " while the whole " + revPurpose + " is not modified";
+			msg += "Change the elements of (a/an) " + revPurpose + " while the whole " + revPurpose
+					+ " is not modified";
 		}
 		msg += ":\n";
 		if (this.units.size() == 0) {
 			// it is the sentence level
 			msg += "Original Sentence: " + this.oldSentence + "\n";
 			msg += "New Sentence: " + this.newSentence + "\n";
-			if(this.oldSentenceIndex!=null && this.oldSentenceIndex.size()!=0)
-				msg += "Original sentence index: "+this.oldSentenceIndex.toString() + "\n";
-			if(this.newSentenceIndex!=null && this.newSentenceIndex.size()!=0)
-				msg += "New sentence index: "+this.newSentenceIndex.toString() + "\n";
+			if (this.oldSentenceIndex != null && this.oldSentenceIndex.size() != 0)
+				msg += "Original sentence index: " + this.oldSentenceIndex.toString() + "\n";
+			if (this.newSentenceIndex != null && this.newSentenceIndex.size() != 0)
+				msg += "New sentence index: " + this.newSentenceIndex.toString() + "\n";
 
 		} else {
 			for (int i = 0; i < this.units.size(); i++) {
@@ -321,8 +330,8 @@ public class RevisionUnit {
 	}
 
 	/**
-	 * Get the revision units at a specified level Use BFS, heavy weight
-	 * function, might cause bad performance
+	 * Get the revision units at a specified level Use BFS, heavy weight function,
+	 * might cause bad performance
 	 * 
 	 * @param level
 	 * @return
@@ -346,34 +355,33 @@ public class RevisionUnit {
 
 	/**
 	 * Get the sentence-level revision units, filtering the multiple purpose cases
+	 * 
 	 * @return
 	 */
 	/*
-	public ArrayList<RevisionUnit> getSentenceRevisionUnitsForML() {
-		ArrayList<RevisionUnit> rus = this.getRevisionUnitAtLevel(0);
-		ArrayList<RevisionUnit> filteredRus = new ArrayList<RevisionUnit>();
-		for(RevisionUnit ru: rus) {
-			if(ru.getRevision_purpose() == RevisionPurpose.WORDUSAGE_CLARITY_CASCADED) {
-			
-			}
-		}
-		return rus;
-	}*/
-	
+	 * public ArrayList<RevisionUnit> getSentenceRevisionUnitsForML() {
+	 * ArrayList<RevisionUnit> rus = this.getRevisionUnitAtLevel(0);
+	 * ArrayList<RevisionUnit> filteredRus = new ArrayList<RevisionUnit>();
+	 * for(RevisionUnit ru: rus) { if(ru.getRevision_purpose() ==
+	 * RevisionPurpose.WORDUSAGE_CLARITY_CASCADED) {
+	 * 
+	 * } } return rus; }
+	 */
+
 	/**
-	 * Get the revision units at a specified level with the sentence index in
-	 * the new draft heavy weight function, might cause bad performance
+	 * Get the revision units at a specified level with the sentence index in the
+	 * new draft heavy weight function, might cause bad performance
 	 * 
 	 * @param level
 	 * @param sentenceIndex
 	 * @return
 	 */
-	public ArrayList<RevisionUnit> getRevisionUnitNewAtLevel(int level,
-			int sentenceIndex) {
+	public ArrayList<RevisionUnit> getRevisionUnitNewAtLevel(int level, int sentenceIndex) {
 		ArrayList<RevisionUnit> rus = new ArrayList<RevisionUnit>();
 		ArrayList<RevisionUnit> candidates = getRevisionUnitAtLevel(level);
 		for (RevisionUnit ru : candidates) {
-			if (ru.getNewSentenceIndex()!=null && ru.getNewSentenceIndex().contains(sentenceIndex) && !ru.isAbandoned())
+			if (ru.getNewSentenceIndex() != null && ru.getNewSentenceIndex().contains(sentenceIndex)
+					&& !ru.isAbandoned())
 				rus.add(ru);
 		}
 		return rus;
@@ -389,34 +397,33 @@ public class RevisionUnit {
 	}
 
 	/**
-	 * Get the revision units at a specified level with the sentence index in
-	 * the old draft heavy weight function, might cause bad performance
-	 * 
-	 * @param level
-	 * @param sentenceIndex
-	 * @return
-	 */
-	public ArrayList<RevisionUnit> getRevisionUnitOldAtLevel(int level,
-			int sentenceIndex) {
-		ArrayList<RevisionUnit> rus = new ArrayList<RevisionUnit>();
-		ArrayList<RevisionUnit> candidates = getRevisionUnitAtLevel(level);
-		for (RevisionUnit ru : candidates) {
-			if (ru.getOldSentenceIndex()!=null && ru.getOldSentenceIndex().contains(sentenceIndex) && !ru.isAbandoned())
-				rus.add(ru);
-		}
-		return rus;
-	}
-
-	/**
-	 * Get the revision unit at a specified level with the revision index in the
+	 * Get the revision units at a specified level with the sentence index in the
 	 * old draft heavy weight function, might cause bad performance
 	 * 
 	 * @param level
 	 * @param sentenceIndex
 	 * @return
 	 */
-	public RevisionUnit getRevisionUnitWithIndexAtLevel(int level,
-			int revisionIndex) {
+	public ArrayList<RevisionUnit> getRevisionUnitOldAtLevel(int level, int sentenceIndex) {
+		ArrayList<RevisionUnit> rus = new ArrayList<RevisionUnit>();
+		ArrayList<RevisionUnit> candidates = getRevisionUnitAtLevel(level);
+		for (RevisionUnit ru : candidates) {
+			if (ru.getOldSentenceIndex() != null && ru.getOldSentenceIndex().contains(sentenceIndex)
+					&& !ru.isAbandoned())
+				rus.add(ru);
+		}
+		return rus;
+	}
+
+	/**
+	 * Get the revision unit at a specified level with the revision index in the old
+	 * draft heavy weight function, might cause bad performance
+	 * 
+	 * @param level
+	 * @param sentenceIndex
+	 * @return
+	 */
+	public RevisionUnit getRevisionUnitWithIndexAtLevel(int level, int revisionIndex) {
 		ArrayList<RevisionUnit> rus = new ArrayList<RevisionUnit>();
 		ArrayList<RevisionUnit> candidates = getRevisionUnitAtLevel(level);
 		for (RevisionUnit ru : candidates) {
@@ -435,18 +442,18 @@ public class RevisionUnit {
 	public ArrayList<RevisionUnit> getCandidateUnitsAtLevel(int level) {
 		ArrayList<RevisionUnit> rus = new ArrayList<RevisionUnit>();
 		int rootLevel = 0;
-		if(root == null) {
+		if (root == null) {
 			rootLevel = this.getRevision_level();
 		} else {
 			rootLevel = root.getRevision_level();
 		}
-		
+
 		HashSet<RevisionUnit> tmpSet = new HashSet<RevisionUnit>();
 		for (int i = 0; i < level; i++) {
 			ArrayList<RevisionUnit> temp = getRevisionUnitAtLevel(i);
-			for (RevisionUnit t : temp) {		
+			for (RevisionUnit t : temp) {
 				if (t.parent_level >= rootLevel && !t.isAbandoned()) {
-					if(!tmpSet.contains(t)) {
+					if (!tmpSet.contains(t)) {
 						rus.add(t);
 						tmpSet.add(t);
 					}
@@ -459,8 +466,7 @@ public class RevisionUnit {
 	// Get a description of this revision unit
 	public String getLabel() {
 		String op = RevisionOp.getOpName(this.getRevision_op());
-		String purpose = RevisionPurpose.getPurposeName(this
-				.getRevision_purpose());
+		String purpose = RevisionPurpose.getPurposeName(this.getRevision_purpose());
 		int level = this.getRevision_level();
 		int index = this.getRevision_index();
 		return op + ": " + purpose + " Level: " + level + " Index:" + index;
@@ -476,19 +482,18 @@ public class RevisionUnit {
 		ArrayList<RevisionUnit> basicUnits = this.getRevisionUnitAtLevel(0);
 		String content = "";
 		int size = basicUnits.size();
-		for (int i = size-1;i>=0;i--) {
+		for (int i = size - 1; i >= 0; i--) {
 			RevisionUnit ru = basicUnits.get(i);
-			if (ru.getNewSentenceIndex() != null && ru.getNewSentenceIndex().size()!=0) {
-				for(Integer index: ru.getNewSentenceIndex())
-				content += "NEW:"+ RevisionOp.getOpName(ru.getRevision_op()) + ":"
-						+ doc.getNewSentence(index) + "\n";
-			} 
-			
-			if (ru.getOldSentenceIndex() !=null && ru.getOldSentenceIndex().size() != 0) {
-				for(Integer index: ru.getOldSentenceIndex())
-					if(index>=0)
-				content += "OLD:"+ RevisionOp.getOpName(ru.getRevision_op()) + ":"
-						+ doc.getOldSentence(index) + "\n";
+			if (ru.getNewSentenceIndex() != null && ru.getNewSentenceIndex().size() != 0) {
+				for (Integer index : ru.getNewSentenceIndex())
+					content += "NEW:" + RevisionOp.getOpName(ru.getRevision_op()) + ":" + doc.getNewSentence(index)
+							+ "\n";
+			}
+
+			if (ru.getOldSentenceIndex() != null && ru.getOldSentenceIndex().size() != 0) {
+				for (Integer index : ru.getOldSentenceIndex())
+					content += "OLD:" + RevisionOp.getOpName(ru.getRevision_op()) + ":" + doc.getOldSentence(index)
+							+ "\n";
 			}
 		}
 		return content;
@@ -500,8 +505,7 @@ public class RevisionUnit {
 		// clear
 		int currentLevel = 0;
 		while (currentLevel < level) {
-			ArrayList<RevisionUnit> rus = this
-					.getRevisionUnitAtLevel(currentLevel);
+			ArrayList<RevisionUnit> rus = this.getRevisionUnitAtLevel(currentLevel);
 			for (RevisionUnit ru : rus) {
 				boolean isAbandoned = true;
 				if (ru.getUnits().size() == 0)
@@ -512,17 +516,14 @@ public class RevisionUnit {
 					ArrayList<RevisionUnit> childs = ru.getUnits();
 					for (RevisionUnit child : childs) {
 						if (child.getParent_index() == ru.getRevision_index()
-								&& child.getParent_level() == ru
-										.getRevision_level()) {
+								&& child.getParent_level() == ru.getRevision_level()) {
 							isAbandoned = false;
 							break;
 						}
 					}
 					if (isAbandoned) {
-						RevisionUnit parent = this
-								.getRevisionUnitWithIndexAtLevel(
-										ru.getParent_level(),
-										ru.getParent_index());
+						RevisionUnit parent = this.getRevisionUnitWithIndexAtLevel(ru.getParent_level(),
+								ru.getParent_index());
 						parent.getUnits().remove(ru); // Remove the abandoned
 														// ones
 					}
@@ -530,15 +531,13 @@ public class RevisionUnit {
 
 				if (!isAbandoned) {
 					// Basic Unit
-					RevisionUnit parent = this.getRevisionUnitWithIndexAtLevel(
-							ru.getParent_level(), ru.getParent_index());
+					RevisionUnit parent = this.getRevisionUnitWithIndexAtLevel(ru.getParent_level(),
+							ru.getParent_index());
 					ArrayList<RevisionUnit> subs = parent.getUnits();
 					boolean isExist = false;
 					for (RevisionUnit tmpUnit : subs) {
-						if (tmpUnit.getRevision_index() == ru
-								.getRevision_index()
-								&& tmpUnit.getRevision_level() == ru
-										.getRevision_level()) {
+						if (tmpUnit.getRevision_index() == ru.getRevision_index()
+								&& tmpUnit.getRevision_level() == ru.getRevision_level()) {
 							isExist = true;
 							break;
 						}
@@ -612,7 +611,20 @@ public class RevisionUnit {
 		this.newParagraphNo = newParagraphNo;
 	}
 
-	
+	public String toStringBrief() {
+		String oldIndexStr = "";
+		String newIndexStr = "";
+		for (Integer oldIndex : this.oldSentenceIndex) {
+			oldIndexStr += oldIndex + ",";
+		}
+		for (Integer newIndex : this.newSentenceIndex) {
+			newIndexStr += newIndex + ",";
+		}
+		String msg = "OLD: " + oldIndexStr + " NEW: " + newIndexStr
+				+ RevisionPurpose.getPurposeName(this.revision_purpose);
+		return msg;
+	}
+
 	public RevisionUnit copy(RevisionUnit anotherRoot) {
 		RevisionUnit ru = new RevisionUnit(anotherRoot);
 		ru.setNewSentenceIndex(this.getNewSentenceIndex());
@@ -621,35 +633,37 @@ public class RevisionUnit {
 		ru.setRevision_index(this.getRevision_index());
 		return ru;
 	}
-	
+
 	/**
-	 * @deprecated
-	 * Get the index label for the comparison of revisions
+	 * @deprecated Get the index label for the comparison of revisions
 	 * @return
 	 */
+	@Deprecated
 	public String getIndexLabel() {
 		String label = "OLD:";
-		for(Integer oldIndex: oldSentenceIndex) {
-			label += oldIndex+"_";
+		for (Integer oldIndex : oldSentenceIndex) {
+			label += oldIndex + "_";
 		}
 		label += "NEW:";
-		for(Integer newIndex: newSentenceIndex) {
+		for (Integer newIndex : newSentenceIndex) {
 			label += newIndex + "_";
 		}
 		return label;
 	}
-	
+
 	public String getUniqueID() {
 		String ID = "";
 		Collections.sort(oldSentenceIndex);
 		Collections.sort(newSentenceIndex);
-		ID+= "OLD-";
-		for(Integer oldIndex: oldSentenceIndex) {
-			if(oldIndex!=-1) ID += oldIndex+ "_";
+		ID += "OLD-";
+		for (Integer oldIndex : oldSentenceIndex) {
+			if (oldIndex != -1)
+				ID += oldIndex + "_";
 		}
 		ID += "NEW-";
-		for(Integer newIndex: newSentenceIndex) {
-			if(newIndex!=-1) ID += newIndex + "_";
+		for (Integer newIndex : newSentenceIndex) {
+			if (newIndex != -1)
+				ID += newIndex + "_";
 		}
 		return ID;
 	}

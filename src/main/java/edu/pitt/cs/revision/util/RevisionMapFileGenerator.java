@@ -24,6 +24,7 @@ import edu.pitt.lrdc.cs.revision.model.RevisionDocument;
 import edu.pitt.lrdc.cs.revision.model.RevisionOp;
 import edu.pitt.lrdc.cs.revision.model.RevisionPurpose;
 import edu.pitt.lrdc.cs.revision.model.RevisionUnit;
+import edu.pitt.lrdc.cs.revision.model.SubsententialRevisionUnit;
 
 public class RevisionMapFileGenerator {
 	// If true, then do not distinguish between surfaces
@@ -59,6 +60,27 @@ public class RevisionMapFileGenerator {
 			RevisionDocument doc) {
 		// List<HeatMapUnit> units = generateUnits4Tagging(doc);
 		List<HeatMapUnit> units = generateUnitsGeneric(doc);
+		adjustUnits(units);
+		ArrayList<ArrayList<HeatMapUnit>> segmentedUnits = new ArrayList<ArrayList<HeatMapUnit>>();
+		int currentP = -1;
+		ArrayList<HeatMapUnit> currentList = null;
+		for (HeatMapUnit unit : units) {
+			if (unit.aVR - currentP > 1) {
+				if (currentList != null)
+					segmentedUnits.add(currentList);
+				currentList = new ArrayList<HeatMapUnit>();
+			}
+			currentP = unit.aVR;
+			currentList.add(unit);
+		}
+		segmentedUnits.add(currentList);
+		return segmentedUnits;
+	}
+
+	public static ArrayList<ArrayList<HeatMapUnit>> getUnits4CRF(
+			RevisionDocument doc, int option) {
+		// List<HeatMapUnit> units = generateUnits4Tagging(doc);
+		List<HeatMapUnit> units = generateUnitsGeneric(doc, option);
 		adjustUnits(units);
 		ArrayList<ArrayList<HeatMapUnit>> segmentedUnits = new ArrayList<ArrayList<HeatMapUnit>>();
 		int currentP = -1;
@@ -276,6 +298,669 @@ public class RevisionMapFileGenerator {
 	 * @return
 	 */
 	public static List<HeatMapUnit> generateUnitsGeneric(RevisionDocument doc) {
+		int cursorOld = 1;
+		int cursorNew = 1;
+		ArrayList<String> oldDraftSentences = doc.getOldDraftSentences();
+		ArrayList<String> newDraftSentences = doc.getNewDraftSentences();
+		int oldIndexMax = oldDraftSentences.size();
+		int newIndexMax = newDraftSentences.size();
+
+		Hashtable<Integer, Integer> oldParagraphSentences = new Hashtable<Integer, Integer>();
+		Hashtable<Integer, Integer> newParagraphSentences = new Hashtable<Integer, Integer>();
+
+		Hashtable<Integer, Integer> oldParaIndices = new Hashtable<Integer, Integer>();
+		Hashtable<Integer, Integer> newParaIndices = new Hashtable<Integer, Integer>();
+
+		Hashtable<Integer, HashSet<Integer>> oldRevisions = new Hashtable<Integer, HashSet<Integer>>();
+		Hashtable<Integer, ArrayList<SubsententialRevisionUnit>> oldRevisions2 = new Hashtable<Integer, ArrayList<SubsententialRevisionUnit>>();
+		Hashtable<Integer, HashSet<Integer>> newRevisions = new Hashtable<Integer, HashSet<Integer>>();
+		Hashtable<Integer, ArrayList<SubsententialRevisionUnit>> newRevisions2 = new Hashtable<Integer, ArrayList<SubsententialRevisionUnit>>();
+
+		ArrayList<RevisionUnit> revisions = doc.getRoot()
+				.getRevisionUnitAtLevel(0);
+		for (RevisionUnit unit : revisions) {
+			ArrayList<Integer> oldIndices = unit.getOldSentenceIndex();
+			ArrayList<Integer> newIndices = unit.getNewSentenceIndex();
+			for (Integer oldIndex : oldIndices) {
+				if (oldIndex != -1) {
+					if (!oldRevisions.containsKey(oldIndex)) {
+						HashSet<Integer> revisionPurposes = new HashSet<Integer>();
+						revisionPurposes.add(unit.getRevision_purpose());
+						oldRevisions.put(oldIndex, revisionPurposes);
+						oldRevisions2.put(oldIndex, unit.getSubsententialUnits());
+					} else {
+						oldRevisions.get(oldIndex).add(
+								unit.getRevision_purpose());
+					}
+				}
+			}
+
+			for (Integer newIndex : newIndices) {
+				if (newIndex != -1) {
+					if (!newRevisions.containsKey(newIndex)) {
+						HashSet<Integer> revisionPurposes = new HashSet<Integer>();
+						revisionPurposes.add(unit.getRevision_purpose());
+						newRevisions.put(newIndex, revisionPurposes);
+						newRevisions2.put(newIndex, unit.getSubsententialUnits());
+					} else {
+						newRevisions.get(newIndex).add(
+								unit.getRevision_purpose());
+					}
+				}
+			}
+		}
+
+		for (int i = 0; i < oldDraftSentences.size(); i++) {
+			int index = i + 1;
+			int sD1 = 1;
+			int oldParaIndex = doc.getParaNoOfOldSentence(index);
+			if (!oldParagraphSentences.containsKey(oldParaIndex))
+				oldParagraphSentences.put(oldParaIndex, sD1);
+			else {
+				sD1 = oldParagraphSentences.get(oldParaIndex) + 1;
+				oldParagraphSentences.put(oldParaIndex, sD1);
+			}
+			oldParaIndices.put(index, sD1);
+		}
+
+		for (int i = 0; i < newDraftSentences.size(); i++) {
+			int index = i + 1;
+			int sD2 = 1;
+			int newParaIndex = doc.getParaNoOfNewSentence(index);
+			if (!newParagraphSentences.containsKey(newParaIndex))
+				newParagraphSentences.put(newParaIndex, sD2);
+			else {
+				sD2 = newParagraphSentences.get(newParaIndex) + 1;
+				newParagraphSentences.put(newParaIndex, sD2);
+			}
+			newParaIndices.put(index, sD2);
+		}
+
+		List<HeatMapUnit> unitList = new ArrayList<HeatMapUnit>();
+		boolean isOldEnded = false;
+		boolean isNewEnded = false;
+		while (cursorOld <= oldIndexMax || cursorNew <= newIndexMax) {
+			ArrayList<Integer> newIndices = null;
+			ArrayList<Integer> oldIndices = null;
+			if (!isOldEnded && cursorOld > oldIndexMax)
+				isOldEnded = true;
+			if (!isOldEnded) {
+				newIndices = doc.getNewFromOld(cursorOld);
+			}
+			if (!isNewEnded && cursorNew > newIndexMax)
+				isNewEnded = true;
+			if (!isNewEnded) {
+				oldIndices = doc.getOldFromNew(cursorNew);
+			}
+			removeNegativeOne(newIndices);
+			removeNegativeOne(oldIndices);
+			boolean moveOld = false;
+			boolean moveNew = false;
+			//If there is only old left and new index is null(Delete)
+			if (!isOldEnded
+					&& (newIndices == null || newIndices.size() == 0 || isNewEnded)) {
+				moveOld = true;
+				HeatMapUnit hmu = new HeatMapUnit();
+				/*if (oldIndices != null && oldIndices.size() > 0)
+					hmu.realOldIndex = oldIndices.get(0);
+				else
+					hmu.realOldIndex = -1;*/
+				hmu.realOldIndex = cursorOld;
+				hmu.realNewIndex = -1;
+				hmu.oldIndex = cursorOld;
+				hmu.newIndex = -1;
+				hmu.sD1 = oldParaIndices.get(cursorOld);
+				hmu.sD2 = -1;
+				hmu.scD1 = oldDraftSentences.get(cursorOld - 1);
+				hmu.scD2 = "";
+				hmu.pD1 = doc.getParaNoOfOldSentence(cursorOld);
+				hmu.pD2 = -1;
+				hmu.rType = RevisionOp.getOpName(RevisionOp.DELETE);
+				if (oldRevisions.containsKey(cursorOld)) {
+					HashSet<Integer> rPurposesSet = oldRevisions.get(cursorOld);
+					String rPurposeStr = "";
+					String revisionPurpose = "";
+					for (Integer rPurpose : rPurposesSet) {
+						if (revisionPurpose.equals("")) {
+							revisionPurpose = RevisionPurpose
+									.getPurposeName(rPurpose);
+						} else {
+							if (rPurpose < RevisionPurpose
+									.getPurposeIndex(revisionPurpose)) {
+								revisionPurpose = RevisionPurpose
+										.getPurposeName(rPurpose);
+							}
+						}
+						rPurposeStr += RevisionPurpose.getPurposeName(rPurpose)
+								+ "+";
+					}
+					hmu.rPurpose = revisionPurpose;
+					hmu.rPurposeStr = rPurposeStr;
+					hmu.subSent = oldRevisions2.get(cursorOld);
+				} else {
+					hmu.rPurpose = "";
+				}
+				cursorOld++;
+				unitList.add(hmu);
+			}
+			//If there is new left and old is none (ADD)
+			if (!isNewEnded
+					&& (oldIndices == null || oldIndices.size() == 0 || isOldEnded)) {
+				moveNew = true;
+				HeatMapUnit hmu = new HeatMapUnit();
+				hmu.realOldIndex = -1;
+/*
+				if (newIndices != null && newIndices.size() > 0)
+					hmu.realNewIndex = cursorNew;
+				else
+					hmu.realNewIndex = -1;*/
+				hmu.realNewIndex = cursorNew;
+				hmu.oldIndex = -1;
+				hmu.newIndex = cursorNew;
+				hmu.sD1 = -1;
+				hmu.sD2 = newParaIndices.get(cursorNew);
+				hmu.scD1 = "";
+				hmu.scD2 = newDraftSentences.get(cursorNew - 1);
+				hmu.pD1 = -1;
+				hmu.pD2 = doc.getParaNoOfNewSentence(cursorNew);
+				hmu.rType = RevisionOp.getOpName(RevisionOp.ADD);
+				if (newRevisions.containsKey(cursorNew)) {
+					HashSet<Integer> rPurposesSet = newRevisions.get(cursorNew);
+					String rPurposeStr = "";
+					String revisionPurpose = "";
+					for (Integer rPurpose : rPurposesSet) {
+						if (revisionPurpose.equals("")) {
+							revisionPurpose = RevisionPurpose
+									.getPurposeName(rPurpose);
+						} else {
+							if (rPurpose < RevisionPurpose
+									.getPurposeIndex(revisionPurpose)) {
+								revisionPurpose = RevisionPurpose
+										.getPurposeName(rPurpose);
+							}
+						}
+						rPurposeStr += RevisionPurpose.getPurposeName(rPurpose)
+								+ "+";
+					}
+					hmu.rPurpose = revisionPurpose;
+					hmu.rPurposeStr = rPurposeStr;
+					hmu.subSent = newRevisions2.get(cursorNew);
+				} else {
+					hmu.rPurpose = "";
+				}
+				cursorNew++;
+				unitList.add(hmu);
+			}
+			//When there is still items
+			if (moveOld == false && moveNew == false) {
+				HeatMapUnit hmu = new HeatMapUnit();
+				if (oldIndices != null && oldIndices.size() > 0)
+					hmu.realOldIndex = oldIndices.get(0);
+				else
+					hmu.realOldIndex = -1;
+				if (newIndices != null && newIndices.size() > 0)
+					hmu.realNewIndex = newIndices.get(0);
+				else
+					hmu.realNewIndex = -1;
+				hmu.oldIndex = cursorOld;
+				hmu.newIndex = cursorNew;
+				hmu.sD1 = oldParaIndices.get(cursorOld);
+				hmu.sD2 = newParaIndices.get(cursorNew);
+				hmu.scD1 = oldDraftSentences.get(cursorOld - 1);
+				hmu.scD2 = newDraftSentences.get(cursorNew - 1);
+				hmu.pD1 = doc.getParaNoOfOldSentence(cursorOld);
+				hmu.pD2 = doc.getParaNoOfNewSentence(cursorNew);
+				if (hmu.scD1.equals(hmu.scD2)) {
+					hmu.rType = RevisionPurpose
+							.getPurposeName(RevisionPurpose.NOCHANGE);
+				} else {
+					hmu.rType = RevisionOp.getOpName(RevisionOp.MODIFY); // Can
+																			// only
+																			// be
+																			// modify
+																			// anyways
+				}
+
+				// Next setting up rPurposes
+				if (newIndices.size() == 1 && oldIndices.size() == 1) {
+					if (newIndices.get(0) == cursorNew
+							&& oldIndices.get(0) == cursorOld) { // Easy case
+																	// where all
+																	// matches
+						if (oldRevisions.containsKey(cursorOld)) {
+							HashSet<Integer> rPurposesSet = oldRevisions
+									.get(cursorOld);
+							String rPurposeStr = "";
+							String revisionPurpose = "";
+							for (Integer rPurpose : rPurposesSet) {
+								if (revisionPurpose.equals("")) {
+									revisionPurpose = RevisionPurpose
+											.getPurposeName(rPurpose);
+								} else {
+									if (rPurpose < RevisionPurpose
+											.getPurposeIndex(revisionPurpose)) {
+										revisionPurpose = RevisionPurpose
+												.getPurposeName(rPurpose);
+									}
+								}
+								rPurposeStr += RevisionPurpose
+										.getPurposeName(rPurpose) + "+";
+							}
+							hmu.rPurpose = revisionPurpose;
+							hmu.rPurposeStr = rPurposeStr;
+							hmu.subSent = oldRevisions2.get(cursorOld);
+						} else {
+							hmu.rPurpose = "";
+						}
+						cursorOld++;
+						cursorNew++;
+						unitList.add(hmu);
+					} else {
+						// The weird case where both aligns to a different
+						// sentence
+						hmu.realOldIndex = oldIndices.get(0);
+						hmu.realNewIndex = newIndices.get(0);
+						hmu.realOldSC = oldDraftSentences
+								.get(hmu.realOldIndex - 1);
+						hmu.realNewSC = newDraftSentences
+								.get(hmu.realNewIndex - 1);
+						if (oldRevisions.containsKey(cursorOld)) {
+							HashSet<Integer> rOldPurposesSet = oldRevisions
+									.get(cursorOld);
+							String rOldPurposeStr = "";
+							String revisionPurposeOld = "";
+							for (Integer rPurpose : rOldPurposesSet) {
+								if (revisionPurposeOld.equals("")) {
+									revisionPurposeOld = RevisionPurpose
+											.getPurposeName(rPurpose);
+								} else {
+									if (rPurpose < RevisionPurpose
+											.getPurposeIndex(revisionPurposeOld)) {
+										revisionPurposeOld = RevisionPurpose
+												.getPurposeName(rPurpose);
+									}
+								}
+								rOldPurposeStr += RevisionPurpose
+										.getPurposeName(rPurpose) + "+";
+							}
+							hmu.rPurposeOld = revisionPurposeOld;
+							hmu.rPurposeOldStr = rOldPurposeStr;
+							hmu.subSent = oldRevisions2.get(cursorOld);
+						} else {
+							hmu.rPurposeOld = "";
+						}
+
+						if (newRevisions.containsKey(cursorNew)) {
+							HashSet<Integer> rNewPurposesSet = newRevisions
+									.get(cursorNew);
+							String rNewPurposeStr = "";
+							String revisionPurposeNew = "";
+							for (Integer rPurpose : rNewPurposesSet) {
+								if (revisionPurposeNew.equals("")) {
+									revisionPurposeNew = RevisionPurpose
+											.getPurposeName(rPurpose);
+								} else {
+									if (rPurpose < RevisionPurpose
+											.getPurposeIndex(revisionPurposeNew)) {
+										revisionPurposeNew = RevisionPurpose
+												.getPurposeName(rPurpose);
+									}
+								}
+								rNewPurposeStr += RevisionPurpose
+										.getPurposeName(rPurpose) + "+";
+							}
+							hmu.rPurposeNew = revisionPurposeNew;
+							hmu.rPurposeNewStr = rNewPurposeStr;
+							hmu.subSent = newRevisions2.get(cursorNew);
+						} else {
+							hmu.rPurposeNew = "";
+						}
+						cursorOld++;
+						cursorNew++;
+						unitList.add(hmu);
+					}
+				} else {
+					// multiple cases
+					if (oldIndices.size() == 1 && newIndices.size() > 1) {
+						String rPurposeStr = "";
+						String revisionPurpose = "";
+						// If the list are consecutive, then continue
+						// building units, if not, then ignore
+						Collections.sort(newIndices);
+						if (oldIndices.get(0) == cursorOld) {
+							// The case of 1 to N　alignment
+							if (oldRevisions.containsKey(cursorOld)) {
+								HashSet<Integer> rPurposesSet = oldRevisions
+										.get(cursorOld);
+
+								for (Integer rPurpose : rPurposesSet) {
+									if (revisionPurpose.equals("")) {
+										revisionPurpose = RevisionPurpose
+												.getPurposeName(rPurpose);
+									} else {
+										if (rPurpose < RevisionPurpose
+												.getPurposeIndex(revisionPurpose)) {
+											revisionPurpose = RevisionPurpose
+													.getPurposeName(rPurpose);
+										}
+									}
+									rPurposeStr += RevisionPurpose
+											.getPurposeName(rPurpose) + "+";
+								}
+								hmu.rPurpose = revisionPurpose;
+								hmu.rPurposeStr = rPurposeStr;
+								hmu.subSent = oldRevisions2.get(cursorOld);
+
+							} else {
+								hmu.rPurpose = "";
+							}
+							hmu.realOldIndex = oldIndices.get(0);
+							hmu.realNewIndex = newIndices.get(0);
+							unitList.add(hmu);
+
+							for (Integer newIndex : newIndices) {
+								if (newIndex != -1 && newIndex != cursorNew) {
+									if (newIndex - cursorNew == 1) {
+										cursorNew = newIndex;
+										HeatMapUnit hmuNext = new HeatMapUnit();
+										hmuNext.realOldIndex = oldIndices
+												.get(0);
+										hmuNext.realNewIndex = newIndex;
+										hmuNext.oldIndex = cursorOld;
+										hmuNext.newIndex = cursorNew;
+										hmuNext.sD1 = oldParaIndices
+												.get(cursorOld);
+										hmuNext.sD2 = newParaIndices
+												.get(cursorNew);
+										hmuNext.scD1 = oldDraftSentences
+												.get(cursorOld - 1);
+										hmuNext.scD2 = newDraftSentences
+												.get(cursorNew - 1);
+										hmuNext.pD1 = doc
+												.getParaNoOfOldSentence(cursorOld);
+										hmuNext.pD2 = doc
+												.getParaNoOfNewSentence(cursorNew);
+										hmuNext.rType = RevisionOp
+												.getOpName(RevisionOp.MODIFY);
+										hmuNext.rPurpose = revisionPurpose;
+										hmuNext.rPurposeStr = rPurposeStr;
+										hmuNext.subSent = oldRevisions2.get(cursorOld);
+
+										unitList.add(hmuNext);
+									} else {
+										break;
+									}
+								}
+							}
+							cursorOld++;
+							cursorNew++;
+						} else {
+							// The case where the sentence are not aligned
+							hmu.realOldIndex = oldIndices.get(0);
+							hmu.realNewIndex = newIndices.get(0);
+							hmu.realOldSC = oldDraftSentences
+									.get(hmu.realOldIndex - 1);
+							hmu.realNewSC = newDraftSentences
+									.get(hmu.realNewIndex - 1);
+							if (oldRevisions.containsKey(cursorOld)) {
+								HashSet<Integer> rOldPurposesSet = oldRevisions
+										.get(cursorOld);
+								String rOldPurposeStr = "";
+								String revisionPurposeOld = "";
+								for (Integer rPurpose : rOldPurposesSet) {
+									if (revisionPurposeOld.equals("")) {
+										revisionPurposeOld = RevisionPurpose
+												.getPurposeName(rPurpose);
+									} else {
+										if (rPurpose < RevisionPurpose
+												.getPurposeIndex(revisionPurposeOld)) {
+											revisionPurposeOld = RevisionPurpose
+													.getPurposeName(rPurpose);
+										}
+									}
+									rOldPurposeStr += RevisionPurpose
+											.getPurposeName(rPurpose) + "+";
+								}
+								hmu.rPurposeOld = revisionPurposeOld;
+								hmu.rPurposeOldStr = rOldPurposeStr;
+								hmu.subSent = oldRevisions2.get(cursorOld);
+							} else {
+								hmu.rPurpose = "";
+							}
+							if (newRevisions.containsKey(cursorNew)) {
+								HashSet<Integer> rNewPurposesSet = newRevisions
+										.get(cursorNew);
+								String rNewPurposeStr = "";
+								String revisionPurposeNew = "";
+								for (Integer rPurpose : rNewPurposesSet) {
+									if (revisionPurposeNew.equals("")) {
+										revisionPurposeNew = RevisionPurpose
+												.getPurposeName(rPurpose);
+									} else {
+										if (rPurpose < RevisionPurpose
+												.getPurposeIndex(revisionPurposeNew)) {
+											revisionPurposeNew = RevisionPurpose
+													.getPurposeName(rPurpose);
+										}
+									}
+									rNewPurposeStr += RevisionPurpose
+											.getPurposeName(rPurpose) + "+";
+								}
+								hmu.rPurposeNew = revisionPurposeNew;
+								hmu.rPurposeNewStr = rNewPurposeStr;
+								hmu.subSent = newRevisions2.get(cursorNew);
+							} else {
+								hmu.rPurposeNew = "";
+							}
+							cursorOld++;
+							cursorNew++;
+							unitList.add(hmu);
+						}
+					} else if (oldIndices.size() > 1 && newIndices.size() == 1) {
+						String rPurposeStr = "";
+						String revisionPurpose = "";
+						if (newIndices.get(0) == cursorNew) {
+							// The case of N to 1 alignment
+							// If the list are consecutive, then continue
+							// building units, if not, then ignore
+							Collections.sort(oldIndices);
+							if (newRevisions.containsKey(cursorNew)) {
+								HashSet<Integer> rPurposesSet = newRevisions
+										.get(cursorNew);
+								for (Integer rPurpose : rPurposesSet) {
+									if (revisionPurpose.equals("")) {
+										revisionPurpose = RevisionPurpose
+												.getPurposeName(rPurpose);
+									} else {
+										if (rPurpose < RevisionPurpose
+												.getPurposeIndex(revisionPurpose)) {
+											revisionPurpose = RevisionPurpose
+													.getPurposeName(rPurpose);
+										}
+									}
+									rPurposeStr += RevisionPurpose
+											.getPurposeName(rPurpose) + "+";
+								}
+								hmu.rPurpose = revisionPurpose;
+								hmu.rPurposeStr = rPurposeStr;
+								hmu.subSent = newRevisions2.get(cursorNew);
+							} else {
+								hmu.rPurpose = "";
+							}
+							hmu.realOldIndex = oldIndices.get(0);
+							hmu.realNewIndex = newIndices.get(0);
+							unitList.add(hmu);
+
+							for (Integer oldIndex : oldIndices) {
+								if (oldIndex != -1 && oldIndex != cursorOld) {
+									if (oldIndex - cursorOld == 1) {
+										cursorOld = oldIndex;
+										HeatMapUnit hmuNext = new HeatMapUnit();
+										hmuNext.realOldIndex = oldIndex;
+										hmuNext.realNewIndex = newIndices
+												.get(0);
+										hmuNext.oldIndex = cursorOld;
+										hmuNext.newIndex = cursorNew;
+										hmuNext.sD1 = oldParaIndices
+												.get(cursorOld);
+										hmuNext.sD2 = newParaIndices
+												.get(cursorNew);
+										hmuNext.scD1 = oldDraftSentences
+												.get(cursorOld - 1);
+										hmuNext.scD2 = newDraftSentences
+												.get(cursorNew - 1);
+										hmuNext.pD1 = doc
+												.getParaNoOfOldSentence(cursorOld);
+										hmuNext.pD2 = doc
+												.getParaNoOfNewSentence(cursorNew);
+										hmuNext.rType = RevisionOp
+												.getOpName(RevisionOp.MODIFY);
+										hmuNext.rPurpose = revisionPurpose;
+										hmuNext.rPurposeStr = rPurposeStr;
+										hmuNext.subSent = newRevisions2.get(cursorNew);
+
+										unitList.add(hmuNext);
+									} else {
+										break;
+									}
+								}
+							}
+							cursorOld++;
+							cursorNew++;
+						} else {
+							hmu.realOldIndex = oldIndices.get(0);
+							hmu.realNewIndex = newIndices.get(0);
+							hmu.realOldSC = oldDraftSentences
+									.get(hmu.realOldIndex - 1);
+							hmu.realNewSC = newDraftSentences
+									.get(hmu.realNewIndex - 1);
+							if (oldRevisions.containsKey(cursorOld)) {
+								HashSet<Integer> rOldPurposesSet = oldRevisions
+										.get(cursorOld);
+								String rOldPurposeStr = "";
+								String revisionPurposeOld = "";
+								for (Integer rPurpose : rOldPurposesSet) {
+									if (revisionPurposeOld.equals("")) {
+										revisionPurposeOld = RevisionPurpose
+												.getPurposeName(rPurpose);
+									} else {
+										if (rPurpose < RevisionPurpose
+												.getPurposeIndex(revisionPurposeOld)) {
+											revisionPurposeOld = RevisionPurpose
+													.getPurposeName(rPurpose);
+										}
+									}
+									rOldPurposeStr += RevisionPurpose
+											.getPurposeName(rPurpose) + "+";
+								}
+								hmu.rPurposeOld = revisionPurposeOld;
+								hmu.rPurposeOldStr = rOldPurposeStr;
+								hmu.subSent = oldRevisions2.get(cursorOld);
+							} else {
+								hmu.rPurposeOld = "";
+							}
+							if (newRevisions.containsKey(cursorNew)) {
+								HashSet<Integer> rNewPurposesSet = newRevisions
+										.get(cursorNew);
+								String rNewPurposeStr = "";
+								String revisionPurposeNew = "";
+								for (Integer rPurpose : rNewPurposesSet) {
+									if (revisionPurposeNew.equals("")) {
+										revisionPurposeNew = RevisionPurpose
+												.getPurposeName(rPurpose);
+									} else {
+										if (rPurpose < RevisionPurpose
+												.getPurposeIndex(revisionPurposeNew)) {
+											revisionPurposeNew = RevisionPurpose
+													.getPurposeName(rPurpose);
+										}
+									}
+									rNewPurposeStr += RevisionPurpose
+											.getPurposeName(rPurpose) + "+";
+								}
+								hmu.rPurposeNew = revisionPurposeNew;
+								hmu.rPurposeNewStr = rNewPurposeStr;
+								hmu.subSent = newRevisions2.get(cursorNew);
+
+							} else {
+								hmu.rPurposeNew = "";
+							}
+							cursorOld++;
+							cursorNew++;
+							unitList.add(hmu);
+						}
+					} else {
+						// In this case, both aligned to multiple different
+						// sentences, so just move with the case
+						hmu.realOldIndex = oldIndices.get(0);
+						hmu.realNewIndex = newIndices.get(0);
+						hmu.realOldSC = oldDraftSentences
+								.get(hmu.realOldIndex - 1);
+						hmu.realNewSC = newDraftSentences
+								.get(hmu.realNewIndex - 1);
+						if (oldRevisions.containsKey(cursorOld)) {
+							HashSet<Integer> rOldPurposesSet = oldRevisions
+									.get(cursorOld);
+							String rOldPurposeStr = "";
+							String revisionPurposeOld = "";
+							for (Integer rPurpose : rOldPurposesSet) {
+								if (revisionPurposeOld.equals("")) {
+									revisionPurposeOld = RevisionPurpose
+											.getPurposeName(rPurpose);
+								} else {
+									if (rPurpose < RevisionPurpose
+											.getPurposeIndex(revisionPurposeOld)) {
+										revisionPurposeOld = RevisionPurpose
+												.getPurposeName(rPurpose);
+									}
+								}
+								rOldPurposeStr += RevisionPurpose
+										.getPurposeName(rPurpose) + "+";
+							}
+							hmu.rPurposeOld = revisionPurposeOld;
+							hmu.rPurposeOldStr = rOldPurposeStr;
+							hmu.subSent = oldRevisions2.get(cursorOld);
+
+						} else {
+							hmu.rPurposeOld = "";
+						}
+						if (newRevisions.containsKey(cursorNew)) {
+							HashSet<Integer> rNewPurposesSet = newRevisions
+									.get(cursorNew);
+							String rNewPurposeStr = "";
+							String revisionPurposeNew = "";
+							for (Integer rPurpose : rNewPurposesSet) {
+								if (revisionPurposeNew.equals("")) {
+									revisionPurposeNew = RevisionPurpose
+											.getPurposeName(rPurpose);
+								} else {
+									if (rPurpose < RevisionPurpose
+											.getPurposeIndex(revisionPurposeNew)) {
+										revisionPurposeNew = RevisionPurpose
+												.getPurposeName(rPurpose);
+									}
+								}
+								rNewPurposeStr += RevisionPurpose
+										.getPurposeName(rPurpose) + "+";
+							}
+							hmu.rPurposeNew = revisionPurposeNew;
+							hmu.rPurposeNewStr = rNewPurposeStr;
+							hmu.subSent = newRevisions2.get(cursorNew);
+						} else {
+							hmu.rPurposeNew = "";
+						}
+						cursorOld++;
+						cursorNew++;
+						unitList.add(hmu);
+					}
+				}
+			}
+		}
+		return unitList;
+	}
+
+	
+	public static List<HeatMapUnit> generateUnitsGeneric(RevisionDocument doc, int option) {
 		int cursorOld = 1;
 		int cursorNew = 1;
 		ArrayList<String> oldDraftSentences = doc.getOldDraftSentences();

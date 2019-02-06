@@ -1,13 +1,9 @@
 package edu.pitt.lrdc.cs.revision.gui;
 
 import java.awt.Color;
-import java.awt.Component;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
+import java.awt.Font;
 
 import javax.swing.*;
-
-import edu.pitt.lrdc.cs.revision.model.RevisionOp;
 
 public class EditUnitV2 extends JPanel {
 	JLabel name;
@@ -45,6 +41,7 @@ public class EditUnitV2 extends JPanel {
 		add(this.name);
 	}*/
 	
+	@Override
 	public void setEnabled(boolean enabled) {
 		this.checkBox.setEnabled(enabled);
 	}
@@ -56,8 +53,10 @@ public class EditUnitV2 extends JPanel {
 	public void reload(int revisionOp) {
 		if(revisionOp == -1) {
 			this.checkBox.setSelected(false);
+			this.name.setFont(this.checkBox.getFont().deriveFont(Font.PLAIN));
 		} else {
 			this.checkBox.setSelected(true);
+			this.name.setFont(this.checkBox.getFont().deriveFont(Font.BOLD));
 		}
 	}
 }

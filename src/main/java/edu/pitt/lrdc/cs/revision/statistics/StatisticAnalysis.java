@@ -9,6 +9,7 @@ import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.util.HashMap;
 import edu.pitt.lrdc.cs.revision.io.RevisionDocumentReader;
 import edu.pitt.lrdc.cs.revision.model.RevisionDocument;
 import edu.pitt.lrdc.cs.revision.model.RevisionOp;
@@ -108,6 +109,56 @@ public class StatisticAnalysis {
 		printAllInfoUnique(trainDocs, e1Scores, e2Scores, w1Scores, w2Scores);
 	}
 
+	public static void printChanges(String rev1Path, String rev2Path)
+			throws Exception {
+		ArrayList<RevisionDocument> docs = RevisionDocumentReader
+				.readDocs(rev1Path);
+		ArrayList<RevisionDocument> docs2 = RevisionDocumentReader
+				.readDocs(rev2Path);
+		HashMap<String, RevisionDocument> index1 = new HashMap<String, RevisionDocument>();
+		for (RevisionDocument doc : docs) {
+			String name = new File(doc.getDocumentName()).getName();
+			index1.put(name, doc);
+		}
+		String result = "";
+		for (RevisionDocument doc2 : docs2) {
+			String name = new File(doc2.getDocumentName()).getName();
+			
+				RevisionDocument doc1 = index1.get(name);
+				int total1 = getTotalCount(doc1);
+				int total2 = getTotalCount(doc2);
+				int surface1 = getSurfaceChangeCount(doc1);
+				int surface2 = getSurfaceChangeCount(doc2);
+				int content1 = total1 - surface1;
+				int content2 = total2 - surface2;
+				result += total1 + "\t" + total2 + "\t" + surface1 + "\t"
+						+ surface2 + "\t" + content1 + "\t" + content2;
+				result += "\n";
+			
+
+		}
+		System.out.println(result);
+	}
+
+	public static int getSurfaceChangeCount(RevisionDocument doc) {
+		ArrayList<RevisionUnit> revisions = doc.getRoot()
+				.getRevisionUnitAtLevel(0);
+		int count = 0;
+		for (RevisionUnit unit : revisions) {
+			int revPurpose = unit.getRevision_purpose();
+			if (revPurpose == RevisionPurpose.WORDUSAGE_CLARITY
+					|| revPurpose == RevisionPurpose.CONVENTIONS_GRAMMAR_SPELLING
+					|| revPurpose == RevisionPurpose.ORGANIZATION) {
+				count++;
+			}
+		}
+		return count;
+	}
+
+	public static int getTotalCount(RevisionDocument doc) {
+		return doc.getRoot().getRevisionUnitAtLevel(0).size();
+	}
+
 	public static void main(String[] args) throws Exception {
 		String path = "C:\\Not Backed Up\\data\\naaclData\\C1";
 		// String path =
@@ -122,9 +173,13 @@ public class StatisticAnalysis {
 		 * ArrayList<RevisionDocument> testDocs = reader
 		 * .readDocs("D:\\annotationTool\\annotated\\class4");
 		 */
-		ArrayList<RevisionDocument> testDocs = RevisionDocumentReader
-				.readDocs(path);
-		printAllInfoOp(testDocs);
+
+		printChanges(
+				"C:\\Not Backed Up\\data\\eagerstudy\\ratingStudy\\d1d2",
+				"C:\\Not Backed Up\\data\\eagerstudy\\ratingStudy\\d2d3");
+		// ArrayList<RevisionDocument> testDocs = RevisionDocumentReader
+		// .readDocs(path);
+		// printAllInfoOp(testDocs);
 		// for(int i =
 		// RevisionPurpose.START;i<=RevisionPurpose.WORDUSAGE_CLARITY;i++) {
 		// printCatgories(testDocs,i);

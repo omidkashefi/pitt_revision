@@ -5,6 +5,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+
+import org.maltparserx.core.helper.HashMap;
 
 import edu.pitt.lrdc.cs.revision.model.RevisionDocument;
 
@@ -45,6 +48,75 @@ public class EvaluateTool {
 		}
 		return crossCuts;
 	}
+	
+	public static String getIDName(RevisionDocument doc) {
+		String docName = doc.getDocumentName();
+		String[] splits = docName.split("_");
+		String idName = "";
+		for (String split : splits) {
+			if (split.startsWith("esl") || split.startsWith("native")) {
+				idName = split;
+				break;
+			}
+		}
+		idName = idName.replace(".txt", "");
+		idName = idName.replace(".xlsx", "");
+		return idName;
+	}
+	
+	
+	public static ArrayList<ArrayList<ArrayList<RevisionDocument>>> getCrossCut2(ArrayList<RevisionDocument> docs, int folder) {
+		int size = docs.size();
+		//inHashMap<K, V>= (int)Math.floor((size*1.0/folder)) + 1;
+		HashMap<String, ArrayList<Integer>> indiceMap = new HashMap<String, ArrayList<Integer>>();
+		List<String> toShuffle = new ArrayList<String>();
+		for(int i = 0; i < docs.size(); i++) {
+			RevisionDocument doc = docs.get(i);
+			String idName = getIDName(doc);
+		
+			if(!indiceMap.containsKey(idName)) {
+				indiceMap.put(idName, new ArrayList<Integer>());
+				toShuffle.add(idName);
+			} 
+			indiceMap.get(idName).add(i);
+		}
+		size = toShuffle.size();
+	
+		int topK = (int)Math.round((size*1.0/folder));
+		ArrayList<ArrayList<ArrayList<RevisionDocument>>> crossCuts = new ArrayList<ArrayList<ArrayList<RevisionDocument>>>();
+		//Collections.shuffle(docs); //shuffle and get top K as testSet
+		Collections.shuffle(toShuffle);
+		for(int i = 0;i<folder;i++) {
+			ArrayList<ArrayList<RevisionDocument>> cuts = new ArrayList<ArrayList<RevisionDocument>>();
+			ArrayList<RevisionDocument> test = new ArrayList<RevisionDocument>();
+			ArrayList<RevisionDocument> train = new ArrayList<RevisionDocument>();
+			
+			int startIndex = topK*i;
+			int endIndex = topK*(i+1)-1;
+			for(int j = 0;j<size;j++) {
+				if(j>=startIndex&&j<=endIndex) {
+					//test.add(docs.get(j));
+					String idName = toShuffle.get(j);
+					List<Integer> docIndices = indiceMap.get(idName);
+					for(Integer index: docIndices) {
+						test.add(docs.get(index));
+					}
+				} else {
+					//train.add(docs.get(j));
+					String idName = toShuffle.get(j);
+					List<Integer> docIndices = indiceMap.get(idName);
+					for(Integer index: docIndices) {
+						train.add(docs.get(index));
+					}
+				}
+			}
+			cuts.add(train);
+			cuts.add(test);
+			crossCuts.add(cuts);
+		}
+		return crossCuts;
+	}
+	
 	
 	public static void printEvaluation(ArrayList<ConfusionMatrix> matrice) {
 		System.out.println(getOverallConfusionMatrixStr(matrice));

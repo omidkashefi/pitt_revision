@@ -1,5 +1,9 @@
 package edu.pitt.lrdc.cs.revision.alignment.model;
 
+import java.util.ArrayList;
+
+import edu.pitt.lrdc.cs.revision.model.SubsententialRevisionUnit;
+
 /**
  * Model for HeatMap visualization
  * 
@@ -116,6 +120,7 @@ public class HeatMapUnit implements Comparable {
 	public String rPurposeOldStr="";
 	public String rPurposeNew="";
 	public String rPurposeNewStr="";
+	public ArrayList<SubsententialRevisionUnit> subSent;
 	
 	public int oldIndex;
 	public int newIndex;
@@ -225,6 +230,14 @@ public class HeatMapUnit implements Comparable {
 
 	public void setrPurpose(String rPurpose) {
 		this.rPurpose = rPurpose;
+	}
+	
+	public ArrayList<SubsententialRevisionUnit> getSubSent() {
+		return this.subSent;
+	}
+	
+	public void setSubSent(ArrayList<SubsententialRevisionUnit> subSent) {
+		this.subSent = subSent;
 	}
 
 	public String getrPurposeStr() {

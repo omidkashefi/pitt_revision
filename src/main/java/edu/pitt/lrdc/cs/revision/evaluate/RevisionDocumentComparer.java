@@ -11,6 +11,7 @@ import edu.pitt.lrdc.cs.revision.model.RevisionUnit;
 public class RevisionDocumentComparer {
 	public static int getAlignmentAgreements(RevisionDocument docOriginal,
 			RevisionDocument docNew) {
+		System.err.println("Agreement of :" + docOriginal.getDocumentName());
 		int oldDraftNum = docOriginal.getOldDraftSentences().size();
 		int newDraftNum = docOriginal.getNewDraftSentences().size();
 		int agreement = 0;
@@ -161,7 +162,7 @@ public class RevisionDocumentComparer {
 
 	public static int getIndex(int revTypes, int revType) {
 		if (revTypes == 2) {
-			if (revType == RevisionPurpose.SURFACE) {
+			if (revType == RevisionPurpose.SURFACE || revType == RevisionPurpose.WORDUSAGE_CLARITY) {
 				return 1;
 			} else {
 				return 0;
@@ -171,10 +172,24 @@ public class RevisionDocumentComparer {
 				return 0;
 			} else if (revType == RevisionPurpose.CD_WARRANT_REASONING_BACKING
 					|| revType == RevisionPurpose.EVIDENCE
-					|| revType == RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT) {
+					|| revType == RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT
+					|| revType == RevisionPurpose.CD_REBUTTAL_RESERVATION) {
 				return 1;
-			} else if (revType == RevisionPurpose.SURFACE) {
+			} else if (revType == RevisionPurpose.SURFACE || revType == RevisionPurpose.WORDUSAGE_CLARITY) {
 				return 2;
+			}
+		} else if (revTypes == 5) {
+			if (revType == RevisionPurpose.CLAIMS_IDEAS) {
+				return 0;
+			} else if (revType == RevisionPurpose.CD_WARRANT_REASONING_BACKING
+					|| revType == RevisionPurpose.CD_REBUTTAL_RESERVATION) {
+				return 1;
+			} else if (revType == RevisionPurpose.EVIDENCE) {
+				return 2;
+			} else if (revType == RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT) {
+				return 3;
+			} else if (revType == RevisionPurpose.SURFACE || revType == RevisionPurpose.WORDUSAGE_CLARITY) {
+				return 4;
 			}
 		} else {
 			if (revType == RevisionPurpose.CLAIMS_IDEAS) {
@@ -185,8 +200,10 @@ public class RevisionDocumentComparer {
 				return 2;
 			} else if (revType == RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT) {
 				return 3;
-			} else if (revType == RevisionPurpose.SURFACE) {
+			} else if (revType == RevisionPurpose.CD_REBUTTAL_RESERVATION) {
 				return 4;
+			} else if (revType == RevisionPurpose.SURFACE || revType == RevisionPurpose.WORDUSAGE_CLARITY) {
+				return 5;
 			}
 		}
 		return revTypes;

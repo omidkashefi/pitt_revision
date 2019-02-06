@@ -1,27 +1,8 @@
 package edu.pitt.lrdc.cs.revision.gui;
 
-/**
- * 
- * @author zhangfan
- * 
- * version 3.0 
- * put the old draft and new draft in one tab
- * 
- * This version aligns the sentences
- */
-import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-
 import java.util.*;
 
 import edu.pitt.lrdc.cs.revision.model.RevisionDocument;
@@ -36,6 +17,7 @@ public class AdvBaseLevelPanelV3 extends JPanel implements LevelPanel {
 	
 	RevisionDocument doc; // Data model
 	JButton changeAlignmentButton; // Change alignment
+	JPanel buttonPanel;
 	Box sentenceBox;
 	AnnotateBox annotateBox;// For annotate the purposes and operations
 	ContentBox annotateContentDetail;
@@ -59,6 +41,7 @@ public class AdvBaseLevelPanelV3 extends JPanel implements LevelPanel {
 	
 	//ArrayList<Integer> currentOldSentenceIndex;
 	//ArrayList<Integer> currentNewSentenceIndex;
+	@Override
 	public void registerRevision() {
 		ArrayList<SelectionUnit> sus = annotateBox.getSelectedUnits();
 		if (currentRU == null || currentRU.size()==0) {
@@ -196,8 +179,8 @@ public class AdvBaseLevelPanelV3 extends JPanel implements LevelPanel {
 		sentenceList = wrapper.getOldSentenceList();
 		newSentenceList = wrapper.getNewSentenceList();
 		wrapper.paint();
-		JScrollPane pane = new JScrollPane(sentenceList,JScrollPane.VERTICAL_SCROLLBAR_NEVER,
-	            JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+		JScrollPane pane = new JScrollPane(sentenceList,ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
+	            ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
 		JScrollPane newPane = new JScrollPane(newSentenceList);
 		 JScrollBar sBar2 = pane.getVerticalScrollBar();
 		    sBar2.setModel(newPane.getVerticalScrollBar().getModel());
@@ -255,7 +238,10 @@ public class AdvBaseLevelPanelV3 extends JPanel implements LevelPanel {
 		});
 		
 		add(sentenceBox);
-		add(changeAlignmentButton);
+		buttonPanel = new JPanel();
+		buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.X_AXIS));
+		buttonPanel.add(changeAlignmentButton);
+		add(buttonPanel);
 		add(annotateContentDetail);
 		// c.fill = GridBagConstraints.HORIZONTAL;
 		// c.gridx = 0;

@@ -11,6 +11,54 @@ public class CategoryFactory {
 	public static int ALL_MODE = 4; //every type of change
 	public static int BINARY_MODE = 5;//content or surface change
 	
+	public static ArrayList<String> buildCategoriesNCategory(int option) {
+		ArrayList<String> categories = new ArrayList<String>();
+		categories.add(RevisionPurpose.getPurposeName(RevisionPurpose.NOCHANGE));
+		if (option == 3) {
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CLAIMS_IDEAS));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.EVIDENCE));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.SURFACE));
+		} else if (option == 1) {
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CLAIMS_IDEAS));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.SURFACE));
+		} else if (option == 2) {
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CLAIMS_IDEAS));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.SURFACE));
+		} else if (option == 4) {
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CLAIMS_IDEAS));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.EVIDENCE));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CD_REBUTTAL_RESERVATION));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.SURFACE));
+		}
+		return categories;
+	}
+	
 	public static ArrayList<String> buildCategories(int option) {
 		ArrayList<String> categories = new ArrayList<String>();
 		if(option == CONTENT_MODE) {

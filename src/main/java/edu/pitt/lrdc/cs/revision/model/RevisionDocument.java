@@ -2,6 +2,7 @@ package edu.pitt.lrdc.cs.revision.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -39,6 +40,24 @@ public class RevisionDocument {
 		this.documentName = documentName;
 	}
 
+	int oldCnt = 0;
+	public int getOldWordCnt() {
+		if(oldCnt != 0) return oldCnt;
+		for(String str: this.getOldDraftSentences()) {
+			oldCnt += str.split(" ").length;
+		}
+		return oldCnt;
+	}
+	
+	int newCnt = 0;
+	public int getNewWordCnt() {
+		if(newCnt != 0) return newCnt;
+		for(String str: this.getNewDraftSentences()) {
+			newCnt += str.split(" ").length;
+		}
+		return newCnt;
+	}
+	
 	private Hashtable<Integer, Integer> oldPurposeMap;
 	private Hashtable<Integer, Integer> newPurposeMap;
 	
@@ -305,6 +324,67 @@ public class RevisionDocument {
 		return copyDoc;
 	}
  
+	
+	/**
+	 * Copy the document for evaluation or for full-stack prediction
+	 * @return
+	 * @throws Exception 
+	 */
+	public RevisionDocument copyAlign() throws Exception {
+		RevisionDocument copyDoc = new RevisionDocument();
+		ArrayList<String> olds = copyDoc.getOldDraftSentences();
+		ArrayList<String> news = copyDoc.getNewDraftSentences();
+		for(String oldSent : oldDraftSentences) {
+			olds.add(oldSent);
+		}
+		for(String newSent : newDraftSentences) {
+			news.add(newSent);
+		}
+		copyDoc.setDocumentName(this.documentName);
+		int oldDraftNum = olds.size();
+		int newDraftNum = news.size();
+		for(int i = 1;i<=oldDraftNum;i++) {
+			copyDoc.addOldSentenceParaMap(i, this.getParaNoOfOldSentence(i));
+		}
+		for(int i = 1;i<=newDraftNum;i++) {
+			copyDoc.addNewSentenceParaMap(i, this.getParaNoOfNewSentence(i));
+		}
+		RevisionUnit rootUnit = new RevisionUnit(true);
+		rootUnit.setRevision_level(3);
+		copyDoc.setRoot(rootUnit);
+		
+		RevisionUnit predictedRootUnit = new RevisionUnit(true);
+		predictedRootUnit.setRevision_level(3);
+		copyDoc.setPredictedRoot(predictedRootUnit);
+		
+		Hashtable<Integer, ArrayList<Integer>> copyOldToNew = new Hashtable<Integer, ArrayList<Integer>>();
+		Hashtable<Integer, ArrayList<Integer>> copyNewToOld = new Hashtable<Integer, ArrayList<Integer>>();
+		
+		Iterator<Integer> itOld = this.mapOldtoNew.keySet().iterator();
+		while(itOld.hasNext()) {
+			int index = itOld.next();
+			ArrayList<Integer> copy = new ArrayList<Integer>();
+			copyList(copy, this.mapOldtoNew.get(index));
+			copyOldToNew.put(index, copy);
+		}
+		Iterator<Integer> itNew = this.mapNewtoOld.keySet().iterator();
+		while(itNew.hasNext()) {
+			int index = itNew.next();
+			ArrayList<Integer> copy = new ArrayList<Integer>();
+			copyList(copy, this.mapNewtoOld.get(index));
+			copyNewToOld.put(index, copy);
+		}
+		copyDoc.mapOldtoNew = copyOldToNew;
+		copyDoc.mapNewtoOld = copyNewToOld;
+		return copyDoc;
+		
+	}
+	
+	public void copyList(ArrayList<Integer> a, ArrayList<Integer> b) {
+		for(Integer i : b) {
+			a.add(i);
+		}
+	}
 	/**
 	 * At a sentence to the old draft
 	 * 
@@ -524,7 +604,7 @@ public class RevisionDocument {
 	public ArrayList<Integer> getPredictedOldFromNew(int newSentIndex) {
 		if (this.predicted_mapNewtoOld.containsKey(newSentIndex))
 			return this.predicted_mapNewtoOld.get(newSentIndex);
-		return null;
+		return new ArrayList<Integer>();
 	}
 
 	/**
@@ -536,7 +616,7 @@ public class RevisionDocument {
 	public ArrayList<Integer> getPredictedNewFromOld(int oldSentIndex) {
 		if (this.predicted_mapOldtoNew.containsKey(oldSentIndex))
 			return this.predicted_mapOldtoNew.get(oldSentIndex);
-		return null;
+		return new ArrayList<Integer>();
 	}
 
 	/**

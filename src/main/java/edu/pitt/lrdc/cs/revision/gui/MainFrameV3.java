@@ -1,6 +1,5 @@
 package edu.pitt.lrdc.cs.revision.gui;
 
-import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
@@ -8,19 +7,15 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
-
 import javax.swing.*;
 import javax.ws.rs.core.MediaType;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.multipart.BodyPart;
 import com.sun.jersey.multipart.FormDataMultiPart;
 import com.sun.jersey.multipart.file.FileDataBodyPart;
 
-import edu.pitt.lrdc.cs.revision.io.RestServiceUploader;
 import edu.pitt.lrdc.cs.revision.io.RevisionDocumentReader;
 import edu.pitt.lrdc.cs.revision.io.RevisionDocumentWriter;
 import edu.pitt.lrdc.cs.revision.model.RevisionDocument;
@@ -33,7 +28,7 @@ public class MainFrameV3 extends JFrame {
 	private DraftDisplayPanel displayPanel;
 	private JSplitPane splitPane;
 	private String currentPath = null;
-	private String serverAddress = "http://etna.cs.pitt.edu:8080";
+	private String serverAddress = "http://lrdc-apps.lrdc.pitt.edu:8080";
 	private String username = null;
 
 	public MainFrameV3() {
@@ -97,10 +92,11 @@ public class MainFrameV3 extends JFrame {
 		});
 
 		itemLoadService.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
 					JTextField addressField = new JTextField(
-							"http://localhost:8080");
+							"http://lrdc-apps.lrdc.pitt.edu:8080");
 					JTextField usernameField = new JTextField("test");
 					JPanel myPanel = new JPanel();
 					myPanel.setSize(600, 400);
@@ -130,6 +126,7 @@ public class MainFrameV3 extends JFrame {
 		});
 
 		itemUploadService.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				JOptionPane.showMessageDialog(MainFrameV3.this,
 						uploadToService(serverAddress, username));
@@ -231,8 +228,7 @@ public class MainFrameV3 extends JFrame {
 
 	public void loadFromService(String serverAddress, String username)
 			throws Exception {
-		String url = serverAddress + "/RestfulRevision/AnnotatorService/"
-				+ username;
+		String url = serverAddress + "/RestfulRevision/AnnotatorService/"+username;
 		Client client = Client.create();
 		WebResource webResource = client.resource(url);
 		ClientResponse response = webResource
@@ -242,7 +238,8 @@ public class MainFrameV3 extends JFrame {
 					+ response.getStatus());
 		}
 		File s = response.getEntity(File.class);
-		File ff = new File(username + ".xlsx");
+		//File ff = new File(username + ".xlsx");
+		File ff = new File("Annotation_"+username+".txt"+".xlsx");
 		s.renameTo(ff);
 		FileWriter fr = new FileWriter(s);
 		fr.flush();
@@ -254,7 +251,8 @@ public class MainFrameV3 extends JFrame {
 
 	public String uploadToService(String serverAddress, String username) {
 		save();
-		String url = serverAddress + "/RestfulRevision/AnnotatorService";
+		String url = serverAddress + "/RestfulRevision/AnnotatorService/"+username;
+		System.out.println(url);
 		Client client = Client.create();
 		WebResource webResource = client.resource(url);
 		File f = new File(currentPath);

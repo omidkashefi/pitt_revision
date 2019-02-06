@@ -9,7 +9,6 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 
-import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -23,11 +22,9 @@ import org.apache.commons.lang.ArrayUtils;
 
 import edu.pitt.cs.revision.util.RevisionMapFileGenerator;
 import edu.pitt.lrdc.cs.revision.alignment.model.HeatMapUnit;
-import edu.pitt.lrdc.cs.revision.gui.AdvBaseLevelPanelV2.ListSelectionHandler;
 import edu.pitt.lrdc.cs.revision.model.RevisionDocument;
 import edu.pitt.lrdc.cs.revision.model.RevisionOp;
 import edu.pitt.lrdc.cs.revision.model.RevisionPurpose;
-import edu.pitt.lrdc.cs.revision.model.RevisionUnit;
 
 /**
  * Wrapps the lists of sentences
@@ -91,14 +88,13 @@ public class AlignmentListWrapper {
 	private JTextArea displayArea;
 
 	private RevisionDocument doc;
-
-	// private AdvBaseLevelPanelV3 parentPanel;
+	//private AdvBaseLevelPanelV3 parentPanel;
 
 	public void setDisplay(JTextArea display) {
 		this.displayArea = display;
 		display.setLineWrap(true);
 	}
-
+	
 	public JList<MyListItem> getOldSentenceList() {
 		return this.oldSentenceList;
 	}
@@ -237,12 +233,9 @@ public class AlignmentListWrapper {
 	}
 
 	public void paint() {
-		/*
-		 * List<HeatMapUnit> units = RevisionMapFileGenerator
-		 * .generateUnits4Tagging(doc);
-		 */
-		List<HeatMapUnit> units = RevisionMapFileGenerator
-				.generateUnitsGeneric(doc);
+		/*List<HeatMapUnit> units = RevisionMapFileGenerator
+				.generateUnits4Tagging(doc);*/
+		List<HeatMapUnit> units = RevisionMapFileGenerator.generateUnitsGeneric(doc);
 		RevisionMapFileGenerator.adjustUnits(units);
 		int realOldIndex = 1;
 		int realNewIndex = 1;
@@ -252,12 +245,12 @@ public class AlignmentListWrapper {
 			if (unit.aVR - lastAVR > 1)
 				addBlankLine();
 			lastAVR = unit.aVR;
-			/*
-			 * int[] indices = addLine(unit, realOldIndex, realNewIndex); if
-			 * (indices[0] != -1) realOldIndex = indices[0]; if (indices[1] !=
-			 * -1) realNewIndex = indices[1];
-			 */
-			addLine(unit, unit.oldIndex, unit.newIndex);
+			/*int[] indices = addLine(unit, realOldIndex, realNewIndex);
+			if (indices[0] != -1)
+				realOldIndex = indices[0];
+			if (indices[1] != -1)
+				realNewIndex = indices[1];*/
+			addLine(unit, unit.oldIndex,unit.newIndex);
 		}
 
 		oldSentenceList.setListData(oldData.toArray(new MyListItem[oldData
@@ -399,9 +392,9 @@ public class AlignmentListWrapper {
 		ArrayList<Integer> newIndices = this.getNewSelectedIndexes();
 		removeNegativeOne(oldIndices);
 		removeNegativeOne(newIndices);
-		if (oldIndices.size() == 1) {
+		if(oldIndices.size()==1) {
 			doc.changeOldAlignment(oldIndices.get(0), newIndices);
-		} else if (newIndices.size() == 1) {
+		} else if(newIndices.size()==1){
 			doc.changeNewAlignment(newIndices.get(0), oldIndices);
 		} else {
 			return false;
@@ -409,77 +402,79 @@ public class AlignmentListWrapper {
 		doc.check();
 		return true;
 	}
-
+	
 	public boolean removeAlignment() {
 		ArrayList<Integer> oldIndices = this.getOldSelectedIndexes();
 		ArrayList<Integer> newIndices = this.getNewSelectedIndexes();
 		removeNegativeOne(oldIndices);
 		removeNegativeOne(newIndices);
-		for (Integer oldIndex : oldIndices) {
+		for(Integer oldIndex:oldIndices) {
 			doc.changeOldAlignment(oldIndex, new ArrayList<Integer>());
 		}
-		for (Integer newIndex : newIndices) {
+		for(Integer newIndex:newIndices) {
 			doc.changeNewAlignment(newIndex, new ArrayList<Integer>());
 		}
 		doc.check();
 		return true;
 	}
-
+	
 	class ListSelectionHandler implements ListSelectionListener {
 		private void changeTheSelection(ListSelectionEvent e) {
 			ListSelectionModel lsm = (ListSelectionModel) e.getSource();
 			if (!changeAlignment) {
 				changeAlignment = true;
 				if (lsm.equals(oldSentenceList.getSelectionModel())) {
-					ArrayList<Integer> selectIndices = getOldSelectedIndexes();
-					ArrayList<Integer> newIndexes = new ArrayList<Integer>();
-					for (Integer selectIndex : selectIndices) {
-						if (doc.getNewFromOld(selectIndex) != null)
-							newIndexes.addAll(doc.getNewFromOld(selectIndex));
-					}
+							ArrayList<Integer> selectIndices = getOldSelectedIndexes();
+							ArrayList<Integer> newIndexes = new ArrayList<Integer>();
+							for (Integer selectIndex : selectIndices) {
+								if (doc.getNewFromOld(selectIndex) != null)
+									newIndexes.addAll(doc
+											.getNewFromOld(selectIndex));
+							}
 
-					removeNegativeOne(newIndexes);
-					if (newIndexes == null || newIndexes.size() == 0) {
-						newSentenceList.clearSelection();
-					} else {
-						ArrayList<Integer> currentSelection = getNewSelectedIndexes();
-						if (!compareList(newIndexes, currentSelection)) {
-							Collections.sort(newIndexes);
-							selectNewSelectedIndices(newIndexes);
-						}
-					}
+							removeNegativeOne(newIndexes);
+							if (newIndexes == null || newIndexes.size() == 0) {
+								newSentenceList.clearSelection();
+							} else {
+								ArrayList<Integer> currentSelection = getNewSelectedIndexes();
+								if (!compareList(newIndexes, currentSelection)) {
+									Collections.sort(newIndexes);
+									selectNewSelectedIndices(newIndexes);
+								}
+							}
 				} else if (lsm.equals(newSentenceList.getSelectionModel())) {
-
-					ArrayList<Integer> selectIndices = getNewSelectedIndexes();
-					ArrayList<Integer> oldIndexes = new ArrayList<Integer>();
-					for (Integer selectIndex : selectIndices) {
-						if (doc.getOldFromNew(selectIndex) != null) {
-							oldIndexes.addAll(doc.getOldFromNew(selectIndex));
+			
+							ArrayList<Integer> selectIndices = getNewSelectedIndexes();
+							ArrayList<Integer> oldIndexes = new ArrayList<Integer>();
+							for (Integer selectIndex : selectIndices) {
+								if (doc.getOldFromNew(selectIndex) != null) {
+									oldIndexes.addAll(doc
+											.getOldFromNew(selectIndex));
+								}
+							}
+							removeNegativeOne(oldIndexes);
+							if (oldIndexes == null || oldIndexes.size() == 0) {
+								oldSentenceList.clearSelection();
+							} else {
+								ArrayList<Integer> currentSelection = getOldSelectedIndexes();
+								if (!compareList(oldIndexes, currentSelection)) {
+									Collections.sort(oldIndexes);
+									selectOldSelectedIndices(oldIndexes);
+								}
+							}
 						}
-					}
-					removeNegativeOne(oldIndexes);
-					if (oldIndexes == null || oldIndexes.size() == 0) {
-						oldSentenceList.clearSelection();
-					} else {
-						ArrayList<Integer> currentSelection = getOldSelectedIndexes();
-						if (!compareList(oldIndexes, currentSelection)) {
-							Collections.sort(oldIndexes);
-							selectOldSelectedIndices(oldIndexes);
-						}
-					}
-				}
 			} else {
 				// changing alignment
 			}
 			// highlight();
 		}
-
+		@Override
 		public void valueChanged(ListSelectionEvent e) {
 			ListSelectionModel lsm = (ListSelectionModel) e.getSource();
 			changeTheSelection(e);
 			String oldSent = doc.getOldSentences(getOldSelectedIndexes());
 			String newSent = doc.getNewSentences(getNewSelectedIndexes());
-			displayArea.setText("OLD:\n" + oldSent + "\n\nNEW:\n" + newSent);
+			displayArea.setText("OLD:\n"+oldSent+"\n\nNEW:\n"+newSent);
 		}
 	}
 }

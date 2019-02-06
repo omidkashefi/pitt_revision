@@ -101,7 +101,6 @@ public class RevisionPurposeTagger {
 		tagger = new CrfTagger(modelPath);
 
 		List<List<Pair<String, Double>>> tagProbLists = tagger.tag(testPath);
-		
 
 		// Compute accuracy
 		int total = 0;
@@ -183,7 +182,7 @@ public class RevisionPurposeTagger {
 			br.close();
 		}
 	}
-	
+
 	public Instances[] prepareForLabelling(
 			ArrayList<RevisionDocument> trainDocs,
 			ArrayList<RevisionDocument> testDocs, boolean usingNgram, int remove)
@@ -198,7 +197,7 @@ public class RevisionPurposeTagger {
 		 * (ignoreSurface) categories.add("Surface");
 		 * categories.add("NOCHANGE");
 		 */
-		System.err.println("LALAALALLA:"+remove);
+		System.err.println("LALAALALLA:" + remove);
 		if (categories == null) {
 			if (ignoreSurface)
 				categories = CategoryFactory
@@ -207,8 +206,8 @@ public class RevisionPurposeTagger {
 				categories = CategoryFactory
 						.buildCategories(CategoryFactory.CONTENTSURFACE_MODE);
 		}
-		fe.buildFeaturesCRF(usingNgram, categories,remove);
-		
+		fe.buildFeaturesCRF(usingNgram, categories, remove);
+
 		Instances trainData = wa.buildInstances(fe.features, usingNgram);
 		Instances testData = wa.buildInstances(fe.features, usingNgram);
 
@@ -217,7 +216,7 @@ public class RevisionPurposeTagger {
 					.getUnits4CRF(doc);
 			ArrayList<Object[]> featureArr = null;
 			try {
-				featureArr = fe.extractFeatures(units, doc,usingNgram,remove);
+				featureArr = fe.extractFeatures(units, doc, usingNgram, remove);
 			} catch (Exception exp) {
 				exp.printStackTrace();
 				System.out.println(doc.getDocumentName());
@@ -276,7 +275,375 @@ public class RevisionPurposeTagger {
 			ArrayList<ArrayList<HeatMapUnit>> units = RevisionMapFileGenerator
 					.getUnits4CRF(doc);
 			ArrayList<Object[]> featureArr = fe.extractFeatures(units, doc,
-					usingNgram,remove);
+					usingNgram, remove);
+			int index = 0;
+			for (ArrayList<HeatMapUnit> paragraph : units) {
+				for (HeatMapUnit hmu : paragraph) {
+					Object[] features = featureArr.get(index);
+					if (hmu.rType.equals(RevisionPurpose
+							.getPurposeName(RevisionPurpose.NOCHANGE))) {
+						wa.addInstance(
+								features,
+								fe.features,
+								usingNgram,
+								testData,
+								RevisionPurpose
+										.getPurposeName(RevisionPurpose.NOCHANGE),
+								"dummy");
+					} else {
+						if (hmu.rPurpose.trim().length() == 0) {
+							wa.addInstance(
+									features,
+									fe.features,
+									usingNgram,
+									testData,
+									RevisionPurpose
+											.getPurposeName(RevisionPurpose.NOCHANGE),
+									"dummy");
+						} else {
+							String purpose = hmu.rPurpose;
+							if (purpose
+									.equals(RevisionPurpose
+											.getPurposeName(RevisionPurpose.WORDUSAGE_CLARITY))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.ORGANIZATION))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.WORDUSAGE_CLARITY_CASCADED))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.PRECISION))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.CONVENTIONS_GRAMMAR_SPELLING))) {
+								purpose = RevisionPurpose
+										.getPurposeName(RevisionPurpose.SURFACE);
+							}
+							wa.addInstance(features, fe.features, usingNgram,
+									testData, purpose, "dummy");
+
+						}
+					}
+					index++;
+				}
+			}
+		}
+		Instances[] trainTestInstances = new Instances[2];
+		if (usingNgram) {
+			trainTestInstances = wa.addNgram(trainData, testData);
+			Instances trainDataRem = WekaAssist.removeID(trainTestInstances[0]);
+			Instances testDataRem = WekaAssist.removeID(trainTestInstances[1]);
+
+			// trainTestInstances[0] = trainDataRem;
+			// trainTestInstances[1] = testDataRem;
+			trainTestInstances = WekaAssist.selectFeatures(trainDataRem,
+					testDataRem);
+		} else {
+			trainTestInstances[0] = trainData;
+			trainTestInstances[1] = testData;
+		}
+
+		return trainTestInstances;
+	}
+
+	public Instances[] prepareForLabelling(
+			ArrayList<RevisionDocument> trainDocs,
+			ArrayList<RevisionDocument> testDocs, boolean usingNgram,
+			int remove, int option) throws Exception {
+		/*
+		 * ArrayList<String> categories = new ArrayList<String>(); for (int i =
+		 * RevisionPurpose.START; i <= RevisionPurpose.END; i++) { if
+		 * (ignoreSurface && (i == RevisionPurpose.WORDUSAGE_CLARITY || i ==
+		 * RevisionPurpose.CONVENTIONS_GRAMMAR_SPELLING || i ==
+		 * RevisionPurpose.WORDUSAGE_CLARITY_CASCADED)) { // do nothing } else {
+		 * categories.add(RevisionPurpose.getPurposeName(i)); } } if
+		 * (ignoreSurface) categories.add("Surface");
+		 * categories.add("NOCHANGE");
+		 */
+		System.err.println("LALAALALLA:" + remove);
+		/*
+		 * if (categories == null) { if (ignoreSurface) categories =
+		 * CategoryFactory
+		 * .buildCategories(CategoryFactory.CONTENTSURFACE_MODE); else
+		 * categories = CategoryFactory
+		 * .buildCategories(CategoryFactory.CONTENTSURFACE_MODE); }
+		 */
+		categories = CategoryFactory.buildCategoriesNCategory(option);
+		fe.buildFeaturesCRF(usingNgram, categories, remove);
+
+		Instances trainData = wa.buildInstances(fe.features, usingNgram);
+		Instances testData = wa.buildInstances(fe.features, usingNgram);
+
+		for (RevisionDocument doc : trainDocs) {
+			ArrayList<ArrayList<HeatMapUnit>> units = RevisionMapFileGenerator
+					.getUnits4CRF(doc, option);
+			ArrayList<Object[]> featureArr = null;
+			try {
+				featureArr = fe.extractFeatures(units, doc, usingNgram, remove);
+			} catch (Exception exp) {
+				exp.printStackTrace();
+				System.out.println(doc.getDocumentName());
+			}
+			int index = 0;
+			for (ArrayList<HeatMapUnit> paragraph : units) {
+				for (HeatMapUnit hmu : paragraph) {
+					Object[] features = featureArr.get(index);
+					if (hmu.rType.equals(RevisionPurpose
+							.getPurposeName(RevisionPurpose.NOCHANGE))) {
+						wa.addInstance(
+								features,
+								fe.features,
+								usingNgram,
+								trainData,
+								RevisionPurpose
+										.getPurposeName(RevisionPurpose.NOCHANGE),
+								"dummy");
+					} else {
+						// For training data, trim the unlabeled ones
+						if (hmu.rPurpose.trim().length() > 0) {
+							String purpose = hmu.rPurpose;
+							if (purpose
+									.equals(RevisionPurpose
+											.getPurposeName(RevisionPurpose.WORDUSAGE_CLARITY))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.ORGANIZATION))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.WORDUSAGE_CLARITY_CASCADED))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.PRECISION))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.CONVENTIONS_GRAMMAR_SPELLING))) {
+								purpose = RevisionPurpose
+										.getPurposeName(RevisionPurpose.SURFACE);
+							} else {
+								if (option == 3) {
+									if (purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.CD_REBUTTAL_RESERVATION))) {
+										purpose = RevisionPurpose
+												.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING);
+									} else if (option == 4) {
+									} else if (option == 1) {
+										purpose = RevisionPurpose
+												.getPurposeName(RevisionPurpose.CLAIMS_IDEAS);
+									} else {
+										if (!purpose
+												.equals(RevisionPurpose
+														.getPurposeName(RevisionPurpose.CLAIMS_IDEAS))) {
+											purpose = RevisionPurpose
+													.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING);
+										}
+									}
+								}
+							}
+							wa.addInstance(features, fe.features, usingNgram,
+									trainData, purpose, "dummy");
+
+						}
+						index++;
+						if (trainData.size() > 0
+								&& trainData.instance(trainData.size() - 1)
+										.classValue() == -1)
+							System.out.println("PURPOSE:" + hmu.rPurpose);
+					}
+				}
+			}
+		}
+
+		for (RevisionDocument doc : testDocs) {
+			ArrayList<ArrayList<HeatMapUnit>> units = RevisionMapFileGenerator
+					.getUnits4CRF(doc);
+			ArrayList<Object[]> featureArr = fe.extractFeatures(units, doc,
+					usingNgram, remove);
+			int index = 0;
+			for (ArrayList<HeatMapUnit> paragraph : units) {
+				for (HeatMapUnit hmu : paragraph) {
+					Object[] features = featureArr.get(index);
+					if (hmu.rType.equals(RevisionPurpose
+							.getPurposeName(RevisionPurpose.NOCHANGE))) {
+						wa.addInstance(
+								features,
+								fe.features,
+								usingNgram,
+								testData,
+								RevisionPurpose
+										.getPurposeName(RevisionPurpose.NOCHANGE),
+								"dummy");
+					} else {
+						if (hmu.rPurpose.trim().length() == 0) {
+							wa.addInstance(
+									features,
+									fe.features,
+									usingNgram,
+									testData,
+									RevisionPurpose
+											.getPurposeName(RevisionPurpose.NOCHANGE),
+									"dummy");
+						} else {
+							String purpose = hmu.rPurpose;
+							if (purpose
+									.equals(RevisionPurpose
+											.getPurposeName(RevisionPurpose.WORDUSAGE_CLARITY))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.ORGANIZATION))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.WORDUSAGE_CLARITY_CASCADED))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.PRECISION))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.CONVENTIONS_GRAMMAR_SPELLING))) {
+								purpose = RevisionPurpose
+										.getPurposeName(RevisionPurpose.SURFACE);
+							} else {
+								if (option == 3) {
+									if (purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.CD_REBUTTAL_RESERVATION))) {
+										purpose = RevisionPurpose
+												.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING);
+									} else if (option == 4) {
+									} else if (option == 1) {
+										purpose = RevisionPurpose
+												.getPurposeName(RevisionPurpose.CLAIMS_IDEAS);
+									} else {
+										if (!purpose
+												.equals(RevisionPurpose
+														.getPurposeName(RevisionPurpose.CLAIMS_IDEAS))) {
+											purpose = RevisionPurpose
+													.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING);
+										}
+									}
+								}
+							}
+							wa.addInstance(features, fe.features, usingNgram,
+									testData, purpose, "dummy");
+
+						}
+					}
+					index++;
+				}
+			}
+		}
+		Instances[] trainTestInstances = new Instances[2];
+		if (usingNgram) {
+			trainTestInstances = wa.addNgram(trainData, testData);
+			Instances trainDataRem = WekaAssist.removeID(trainTestInstances[0]);
+			Instances testDataRem = WekaAssist.removeID(trainTestInstances[1]);
+
+			// trainTestInstances[0] = trainDataRem;
+			// trainTestInstances[1] = testDataRem;
+			trainTestInstances = WekaAssist.selectFeatures(trainDataRem,
+					testDataRem);
+		} else {
+			trainTestInstances[0] = trainData;
+			trainTestInstances[1] = testData;
+		}
+
+		return trainTestInstances;
+	}
+
+	public Instances[] prepareForLabellingOption(
+			ArrayList<RevisionDocument> trainDocs,
+			ArrayList<RevisionDocument> testDocs, boolean usingNgram,
+			int remove, int option) throws Exception {
+		/*
+		 * ArrayList<String> categories = new ArrayList<String>(); for (int i =
+		 * RevisionPurpose.START; i <= RevisionPurpose.END; i++) { if
+		 * (ignoreSurface && (i == RevisionPurpose.WORDUSAGE_CLARITY || i ==
+		 * RevisionPurpose.CONVENTIONS_GRAMMAR_SPELLING || i ==
+		 * RevisionPurpose.WORDUSAGE_CLARITY_CASCADED)) { // do nothing } else {
+		 * categories.add(RevisionPurpose.getPurposeName(i)); } } if
+		 * (ignoreSurface) categories.add("Surface");
+		 * categories.add("NOCHANGE");
+		 */
+		System.err.println("LALAALALLA:" + remove);
+		if (categories == null) {
+			if (ignoreSurface)
+				categories = CategoryFactory
+						.buildCategories(CategoryFactory.CONTENTSURFACE_MODE);
+			else
+				categories = CategoryFactory
+						.buildCategories(CategoryFactory.CONTENTSURFACE_MODE);
+		}
+		fe.buildFeaturesCRF(usingNgram, categories, remove);
+
+		Instances trainData = wa.buildInstances(fe.features, usingNgram);
+		Instances testData = wa.buildInstances(fe.features, usingNgram);
+
+		for (RevisionDocument doc : trainDocs) {
+			ArrayList<ArrayList<HeatMapUnit>> units = RevisionMapFileGenerator
+					.getUnits4CRF(doc);
+			ArrayList<Object[]> featureArr = null;
+			try {
+				featureArr = fe.extractFeatures(units, doc, usingNgram, remove);
+			} catch (Exception exp) {
+				exp.printStackTrace();
+				System.out.println(doc.getDocumentName());
+			}
+			int index = 0;
+			for (ArrayList<HeatMapUnit> paragraph : units) {
+				for (HeatMapUnit hmu : paragraph) {
+					Object[] features = featureArr.get(index);
+					if (hmu.rType.equals(RevisionPurpose
+							.getPurposeName(RevisionPurpose.NOCHANGE))) {
+						wa.addInstance(
+								features,
+								fe.features,
+								usingNgram,
+								trainData,
+								RevisionPurpose
+										.getPurposeName(RevisionPurpose.NOCHANGE),
+								"dummy");
+					} else {
+						// For training data, trim the unlabeled ones
+						if (hmu.rPurpose.trim().length() > 0) {
+							String purpose = hmu.rPurpose;
+							if (purpose
+									.equals(RevisionPurpose
+											.getPurposeName(RevisionPurpose.WORDUSAGE_CLARITY))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.ORGANIZATION))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.WORDUSAGE_CLARITY_CASCADED))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.PRECISION))
+									|| purpose
+											.equals(RevisionPurpose
+													.getPurposeName(RevisionPurpose.CONVENTIONS_GRAMMAR_SPELLING))) {
+								purpose = RevisionPurpose
+										.getPurposeName(RevisionPurpose.SURFACE);
+							}
+							wa.addInstance(features, fe.features, usingNgram,
+									trainData, purpose, "dummy");
+						}
+
+					}
+					index++;
+					if (trainData.size() > 0
+							&& trainData.instance(trainData.size() - 1)
+									.classValue() == -1)
+						System.out.println("PURPOSE:" + hmu.rPurpose);
+				}
+			}
+		}
+
+		for (RevisionDocument doc : testDocs) {
+			ArrayList<ArrayList<HeatMapUnit>> units = RevisionMapFileGenerator
+					.getUnits4CRF(doc);
+			ArrayList<Object[]> featureArr = fe.extractFeatures(units, doc,
+					usingNgram, remove);
 			int index = 0;
 			for (ArrayList<HeatMapUnit> paragraph : units) {
 				for (HeatMapUnit hmu : paragraph) {
@@ -439,9 +806,53 @@ public class RevisionPurposeTagger {
 				String rPurpose = oldRevs.get(oldIndex);
 				if (!rPurpose.equals(RevisionPurpose
 						.getPurposeName(RevisionPurpose.NOCHANGE))) {
-					if (rPurpose.equals("Surface"))
-						rPurpose = RevisionPurpose
-								.getPurposeName(RevisionPurpose.WORDUSAGE_CLARITY);
+
+					if (!doc.getOldSentences(oldIndices).equals(
+							doc.getNewSentences(newIndices))) {
+						/*
+						 * if (rPurpose.equals("Surface")) rPurpose =
+						 * RevisionPurpose
+						 * .getPurposeName(RevisionPurpose.WORDUSAGE_CLARITY);
+						 */
+						RevisionUnit ru = new RevisionUnit(
+								doc.getPredictedRoot());
+						ru.setNewSentenceIndex(newIndices);
+						ru.setOldSentenceIndex(oldIndices);
+						if (newIndices == null || newIndices.size() == 0) {
+							ru.setRevision_op(RevisionOp.DELETE);
+						} else if (oldIndices == null || oldIndices.size() == 0) {
+							ru.setRevision_op(RevisionOp.ADD);
+						} else {
+							ru.setRevision_op(RevisionOp.MODIFY);
+						}
+
+						ru.setRevision_purpose(RevisionPurpose
+								.getPurposeIndex(rPurpose));
+						ru.setRevision_level(0);
+						ru.setRevision_index(revIndex);
+						doc.getPredictedRoot().addUnit(ru);
+						revIndex++;
+					}
+				}
+			}
+		}
+
+		Iterator<Integer> newIt = newLists.keySet().iterator();
+		while (newIt.hasNext()) {
+			int newIndex = newIt.next();
+			ArrayList<Integer> oldIndices = newLists.get(newIndex);
+			ArrayList<Integer> newIndices = new ArrayList<Integer>();
+			newIndices.add(newIndex);
+			String rPurpose = newRevs.get(newIndex);
+			if (!rPurpose.equals(RevisionPurpose
+					.getPurposeName(RevisionPurpose.NOCHANGE))) {
+				if (!doc.getOldSentences(oldIndices).equals(
+						doc.getNewSentences(newIndices))) {
+					/*
+					 * if (rPurpose.equals("Surface")) rPurpose =
+					 * RevisionPurpose
+					 * .getPurposeName(RevisionPurpose.WORDUSAGE_CLARITY);
+					 */
 					RevisionUnit ru = new RevisionUnit(doc.getPredictedRoot());
 					ru.setNewSentenceIndex(newIndices);
 					ru.setOldSentenceIndex(oldIndices);
@@ -460,38 +871,6 @@ public class RevisionPurposeTagger {
 					doc.getPredictedRoot().addUnit(ru);
 					revIndex++;
 				}
-			}
-		}
-
-		Iterator<Integer> newIt = newLists.keySet().iterator();
-		while (newIt.hasNext()) {
-			int newIndex = newIt.next();
-			ArrayList<Integer> oldIndices = newLists.get(newIndex);
-			ArrayList<Integer> newIndices = new ArrayList<Integer>();
-			newIndices.add(newIndex);
-			String rPurpose = newRevs.get(newIndex);
-			if (!rPurpose.equals(RevisionPurpose
-					.getPurposeName(RevisionPurpose.NOCHANGE))) {
-				if (rPurpose.equals("Surface"))
-					rPurpose = RevisionPurpose
-							.getPurposeName(RevisionPurpose.WORDUSAGE_CLARITY);
-				RevisionUnit ru = new RevisionUnit(doc.getPredictedRoot());
-				ru.setNewSentenceIndex(newIndices);
-				ru.setOldSentenceIndex(oldIndices);
-				if (newIndices == null || newIndices.size() == 0) {
-					ru.setRevision_op(RevisionOp.DELETE);
-				} else if (oldIndices == null || oldIndices.size() == 0) {
-					ru.setRevision_op(RevisionOp.ADD);
-				} else {
-					ru.setRevision_op(RevisionOp.MODIFY);
-				}
-
-				ru.setRevision_purpose(RevisionPurpose
-						.getPurposeIndex(rPurpose));
-				ru.setRevision_level(0);
-				ru.setRevision_index(revIndex);
-				doc.getPredictedRoot().addUnit(ru);
-				revIndex++;
 			}
 		}
 
@@ -531,6 +910,40 @@ public class RevisionPurposeTagger {
 		writer.close();
 	}
 
+	public void transformToTxtForCRFTrain(Instances inst,
+			ArrayList<RevisionDocument> docs, String fileName, int option)
+			throws IOException {
+		int index = 0;
+		int classIndex = inst.classIndex();
+		BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
+		for (RevisionDocument doc : docs) {
+			ArrayList<ArrayList<HeatMapUnit>> units = RevisionMapFileGenerator
+					.getUnits4CRF(doc, option);
+
+			for (ArrayList<HeatMapUnit> paragraph : units) {
+				for (HeatMapUnit unit : paragraph) {
+					if (unit.rPurpose.trim().length() > 0
+							|| unit.rType.equals("Nochange")) {
+						Instance instance = inst.instance(index);
+						writer.write(instance.classValue() + "\t");
+						for (int i = 0; i < instance.numAttributes(); i++) {
+							if (i != classIndex) {
+								writer.write(instance.attribute(i).name() + ":"
+										+ instance.value(i) + "\t");
+							}
+						}
+						writer.write("\n");
+						index++;
+					}
+				}
+				if (tagLevelParagraph)
+					writer.write("\n");
+			}
+			writer.write("\n");
+		}
+		writer.close();
+	}
+
 	public void transformToTxtForCRF(Instances inst,
 			ArrayList<RevisionDocument> docs, String fileName)
 			throws IOException {
@@ -540,6 +953,37 @@ public class RevisionPurposeTagger {
 		for (RevisionDocument doc : docs) {
 			ArrayList<ArrayList<HeatMapUnit>> units = RevisionMapFileGenerator
 					.getUnits4CRF(doc);
+
+			for (ArrayList<HeatMapUnit> paragraph : units) {
+				for (HeatMapUnit unit : paragraph) {
+					Instance instance = inst.instance(index);
+					writer.write(instance.classValue() + "\t");
+					for (int i = 0; i < instance.numAttributes(); i++) {
+						if (i != classIndex) {
+							writer.write(instance.attribute(i).name() + ":"
+									+ instance.value(i) + "\t");
+						}
+					}
+					writer.write("\n");
+					index++;
+				}
+				if (tagLevelParagraph)
+					writer.write("\n");
+			}
+			writer.write("\n");
+		}
+		writer.close();
+	}
+
+	public void transformToTxtForCRF(Instances inst,
+			ArrayList<RevisionDocument> docs, String fileName, int option)
+			throws IOException {
+		int index = 0;
+		int classIndex = inst.classIndex();
+		BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
+		for (RevisionDocument doc : docs) {
+			ArrayList<ArrayList<HeatMapUnit>> units = RevisionMapFileGenerator
+					.getUnits4CRF(doc, option);
 
 			for (ArrayList<HeatMapUnit> paragraph : units) {
 				for (HeatMapUnit unit : paragraph) {
@@ -636,7 +1080,7 @@ public class RevisionPurposeTagger {
 			return RevisionPurpose.getPurposeName(RevisionPurpose.SURFACE);
 		}
 	}
-	
+
 	public void writeRevision(BufferedWriter writer, RevisionUnit ru,
 			RevisionDocument doc, String realCat, String predictedCat)
 			throws IOException {
@@ -685,7 +1129,7 @@ public class RevisionPurposeTagger {
 		writer.write(oldSent + "\t");
 		writer.write(newSent + "\t\n");
 	}
-	
+
 	public void outputResult(BufferedWriter writer,
 			ArrayList<RevisionDocument> predictedDocs) throws IOException {
 		for (RevisionDocument doc : predictedDocs) {
@@ -707,12 +1151,13 @@ public class RevisionPurposeTagger {
 					if (!category.equals(realCategory)) {
 						writeRevision(writer, ru, doc, realCategory, category);
 					}
-				} 
+				}
 			}
 		}
 	}
-	
-	public void printErrors(ArrayList<RevisionDocument> docs, String output) throws IOException {
+
+	public void printErrors(ArrayList<RevisionDocument> docs, String output)
+			throws IOException {
 		BufferedWriter writer = new BufferedWriter(new FileWriter(output));
 		writer.write("REAL" + "\t");
 		writer.write("PREDICTED" + "\t");
@@ -729,7 +1174,7 @@ public class RevisionPurposeTagger {
 		outputResult(writer, docs);
 		writer.close();
 	}
-	
+
 	public static void main(String[] args) throws Exception {
 		RevisionPurposeTagger tagger = new RevisionPurposeTagger();
 		// String trainPathAll = "C:\\Not Backed Up\\data\\trainDataCRFVersion";

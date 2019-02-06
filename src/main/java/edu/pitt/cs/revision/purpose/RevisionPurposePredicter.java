@@ -8,12 +8,19 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
 import java.util.StringTokenizer;
 
 import weka.classifiers.Classifier;
 import weka.core.Instance;
 import weka.core.Instances;
+//import edu.pitt.cs.revision.joint.EditSequence;
+//import edu.pitt.cs.revision.joint.SequenceTransformer;
+import edu.pitt.cs.revision.machinelearning.CRFTagger2;
+//import edu.pitt.cs.revision.machinelearning.SequenceFeaturePreparer;
+//import edu.pitt.cs.revision.machinelearning.SequenceProcessor;
 import edu.pitt.cs.revision.machinelearning.WekaAssist;
+import edu.pitt.lrdc.cs.revision.alignment.Aligner;
 import edu.pitt.lrdc.cs.revision.evaluate.EvaluateTool;
 import edu.pitt.lrdc.cs.revision.evaluate.ResultInfoRow;
 import edu.pitt.lrdc.cs.revision.io.RevisionDocumentReader;
@@ -171,7 +178,7 @@ public class RevisionPurposePredicter {
 					if (!category.equals(realCategory)) {
 						writeRevision(writer, ru, doc, realCategory, category);
 					}
-				} 
+				}
 			}
 		}
 	}
@@ -361,6 +368,51 @@ public class RevisionPurposePredicter {
 		categories.add(RevisionPurpose.getPurposeName(RevisionPurpose.SURFACE));
 	}
 
+	public void addPurposeClasses5Class(ArrayList<String> categories, int option) {
+		if (option == 3) {
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CLAIMS_IDEAS));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.EVIDENCE));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.SURFACE));
+		} else if (option == 1) {
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CLAIMS_IDEAS));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.SURFACE));
+		} else if (option == 2) {
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CLAIMS_IDEAS));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.SURFACE));
+		} else if (option == 4) {
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CLAIMS_IDEAS));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.EVIDENCE));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CD_REBUTTAL_RESERVATION));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.SURFACE));
+		}
+	}
+
 	public String transform5Classes(int purpose) {
 		if (purpose == RevisionPurpose.CLAIMS_IDEAS) {
 			return RevisionPurpose.getPurposeName(purpose);
@@ -372,6 +424,58 @@ public class RevisionPurposePredicter {
 			return RevisionPurpose.getPurposeName(purpose);
 		} else {
 			return RevisionPurpose.getPurposeName(RevisionPurpose.SURFACE);
+		}
+	}
+
+	public String transform5Classes(int purpose, int option) {
+		if (option == 3) {
+			if (purpose == RevisionPurpose.CLAIMS_IDEAS) {
+				return RevisionPurpose.getPurposeName(purpose);
+			} else if (purpose == RevisionPurpose.CD_WARRANT_REASONING_BACKING) {
+				return RevisionPurpose.getPurposeName(purpose);
+			} else if (purpose == RevisionPurpose.EVIDENCE) {
+				return RevisionPurpose.getPurposeName(purpose);
+			} else if (purpose == RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT) {
+				return RevisionPurpose.getPurposeName(purpose);
+			} else {
+				return RevisionPurpose.getPurposeName(RevisionPurpose.SURFACE);
+			}
+		} else if(option == 4) {
+			if (purpose == RevisionPurpose.CLAIMS_IDEAS) {
+				return RevisionPurpose.getPurposeName(purpose);
+			} else if (purpose == RevisionPurpose.CD_WARRANT_REASONING_BACKING) {
+				return RevisionPurpose.getPurposeName(purpose);
+			} else if (purpose == RevisionPurpose.EVIDENCE) {
+				return RevisionPurpose.getPurposeName(purpose);
+			} else if (purpose == RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT) {
+				return RevisionPurpose.getPurposeName(purpose);
+			} else if (purpose == RevisionPurpose.CD_REBUTTAL_RESERVATION) {
+				return RevisionPurpose.getPurposeName(purpose);
+			} else {
+				return RevisionPurpose.getPurposeName(RevisionPurpose.SURFACE);
+			}
+		} else if (option == 1) {
+			if (purpose == RevisionPurpose.CLAIMS_IDEAS
+					|| purpose == RevisionPurpose.CD_WARRANT_REASONING_BACKING
+					|| purpose == RevisionPurpose.EVIDENCE
+					|| purpose == RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT
+					|| purpose == RevisionPurpose.CD_REBUTTAL_RESERVATION) {
+				return RevisionPurpose.getPurposeName(purpose);
+			} else {
+				return RevisionPurpose.getPurposeName(RevisionPurpose.SURFACE);
+			}
+		} else {
+			if (purpose == RevisionPurpose.CLAIMS_IDEAS) {
+				return RevisionPurpose.getPurposeName(purpose);
+			} else if (purpose == RevisionPurpose.CD_WARRANT_REASONING_BACKING
+					|| purpose == RevisionPurpose.EVIDENCE
+					|| purpose == RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT
+					|| purpose == RevisionPurpose.CD_REBUTTAL_RESERVATION) {
+				return RevisionPurpose
+						.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING);
+			} else {
+				return RevisionPurpose.getPurposeName(RevisionPurpose.SURFACE);
+			}
 		}
 	}
 
@@ -388,6 +492,52 @@ public class RevisionPurposePredicter {
 		} else {
 			return RevisionPurpose.SURFACE;
 		}
+	}
+	
+	public int transform5ClassesToRevision(double prediction, int option) {
+		int predictInt = (int) prediction;
+		if(option == 3) {
+			if (predictInt == 0) {
+				return RevisionPurpose.CLAIMS_IDEAS;
+			} else if (predictInt == 1) {
+				return RevisionPurpose.CD_WARRANT_REASONING_BACKING;
+			} else if (predictInt == 2) {
+				return RevisionPurpose.EVIDENCE;
+			} else if (predictInt == 3) {
+				return RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT;
+			} else {
+				return RevisionPurpose.SURFACE;
+			}
+		} else if(option == 1) {
+			if (predictInt == 0) {
+				return RevisionPurpose.CLAIMS_IDEAS;
+			} else {
+				return RevisionPurpose.SURFACE;
+			} 
+		} else if(option == 2) {
+			if (predictInt == 0) {
+				return RevisionPurpose.CLAIMS_IDEAS;
+			} else if (predictInt == 1) {
+				return RevisionPurpose.CD_WARRANT_REASONING_BACKING;
+			} else if (predictInt == 2) {
+				return RevisionPurpose.SURFACE;
+			} 
+		} else if(option == 4) {
+			if (predictInt == 0) {
+				return RevisionPurpose.CLAIMS_IDEAS;
+			} else if (predictInt == 1) {
+				return RevisionPurpose.CD_WARRANT_REASONING_BACKING;
+			} else if (predictInt == 2) {
+				return RevisionPurpose.EVIDENCE;
+			} else if (predictInt == 3) {
+				return RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT;
+			} else if (predictInt == 4) {
+				return RevisionPurpose.CD_REBUTTAL_RESERVATION;
+			} else {
+				return RevisionPurpose.SURFACE;
+			}
+		}
+		return RevisionPurpose.NOCHANGE;
 	}
 
 	public void predictRevisionsSolo5Class(
@@ -484,6 +634,91 @@ public class RevisionPurposePredicter {
 			}
 			doc.getPredictedRoot().addUnit(ru);
 		}
+	}
+
+	public Hashtable<String, RevisionDocument> predict(
+			ArrayList<RevisionDocument> trainDocs,
+			ArrayList<RevisionDocument> testDocs, int k, int remove,
+			int option, boolean usingNgram, int topK) throws Exception {
+		Hashtable<String, RevisionDocument> predictedDocs = new Hashtable<String, RevisionDocument>();
+		ArrayList<String> categories = new ArrayList<String>();
+		WekaAssist wa = new WekaAssist();
+		FeatureExtractor fe = new FeatureExtractor();
+		addPurposeClasses5Class(categories, option);
+
+		fe.setOnline(true);
+		fe.buildFeatures(usingNgram, categories, remove);
+		Instances trainData = wa.buildInstances(fe.features, usingNgram);
+		Instances testData = wa.buildInstances(fe.features, usingNgram);
+		for (RevisionDocument doc : trainDocs) {
+			ArrayList<RevisionUnit> basicUnits = doc.getRoot()
+					.getRevisionUnitAtLevel(0);
+			for (RevisionUnit ru : basicUnits) {
+				Object[] features = fe.extractFeatures(doc, ru, usingNgram,
+						remove);
+				wa.addInstance(features, fe.features, usingNgram, trainData,
+						transform5Classes(ru.getRevision_purpose(), option),
+						"dummy");
+			}
+		}
+
+		for (RevisionDocument doc : testDocs) {
+			String docName = doc.getDocumentName();
+			RevisionDocument newDoc = doc.copyAlign();
+			// List<List<EditSequence>> sequences = SequenceTransformer
+			// .tranformToKPossibleSequences(doc, topK);
+			predictedDocs.put(docName, newDoc);
+		}
+
+		Instances data = rpc.createInstancesSOLO5Class(testDocs, usingNgram,
+				option, remove);
+		Instances[] inst = wa.addNgram(trainData, data);
+
+		trainData = inst[0];
+		data = inst[1];
+
+		boolean autoBalance = false;
+		Classifier cl = wa.train(trainData, autoBalance);
+		int ID_index = data.attribute("ID").index();
+
+		Hashtable<String, Integer> revIndexTable = new Hashtable<String, Integer>();
+
+		int dataSize = data.numInstances();
+		for (int j = 0; j < dataSize; j++) {
+			Instance instance = data.instance(j);
+			double category = cl.classifyInstance(instance);
+			// String ID =
+			// data.instance(ID_index).stringValue(instance.attribute(ID_index));
+			String ID = instance.stringValue(instance.attribute(ID_index));
+			AlignStruct as = AlignStruct.parseID(ID);
+			// System.out.println(ID);
+			RevisionDocument doc = predictedDocs.get(as.documentpath);
+			RevisionUnit ru = new RevisionUnit(doc.getPredictedRoot());
+			ru.setNewSentenceIndex(as.newIndices);
+			ru.setOldSentenceIndex(as.oldIndices);
+			if (as.newIndices == null || as.newIndices.size() == 0) {
+				ru.setRevision_op(RevisionOp.DELETE);
+			} else if (as.oldIndices == null || as.oldIndices.size() == 0) {
+				ru.setRevision_op(RevisionOp.ADD);
+			} else {
+				ru.setRevision_op(RevisionOp.MODIFY);
+			}
+
+			// int purpose = (int) category + 1;
+			ru.setRevision_purpose(transform5ClassesToRevision(category, option));
+			ru.setRevision_level(0);
+			if (revIndexTable.containsKey(as.documentpath)) {
+				ru.setRevision_index(revIndexTable.get(as.documentpath));
+				revIndexTable.put(as.documentpath,
+						revIndexTable.get(as.documentpath) + 1);
+			} else {
+				ru.setRevision_index(1);
+				revIndexTable.put(as.documentpath, 2);
+			}
+			doc.getRoot().addUnit(ru);
+		}
+
+		return predictedDocs;
 	}
 
 	/**

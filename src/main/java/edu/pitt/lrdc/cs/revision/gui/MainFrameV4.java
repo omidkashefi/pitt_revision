@@ -1,6 +1,5 @@
 package edu.pitt.lrdc.cs.revision.gui;
 
-import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
@@ -8,23 +7,28 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
+import java.util.Hashtable;
+import java.util.List;
 
 import javax.swing.*;
 import javax.ws.rs.core.MediaType;
 
+import org.apache.commons.io.FileUtils;
+
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.multipart.BodyPart;
 import com.sun.jersey.multipart.FormDataMultiPart;
 import com.sun.jersey.multipart.file.FileDataBodyPart;
 
-import edu.pitt.lrdc.cs.revision.io.RestServiceUploader;
+import edu.pitt.cs.revision.reviewLinking.ReviewItem;
+import edu.pitt.cs.revision.reviewLinking.annotation.ReviewAnnotationReader;
+import edu.pitt.cs.revision.util.RevisionMapFileGenerator;
 import edu.pitt.lrdc.cs.revision.io.ReviewProcessor;
 import edu.pitt.lrdc.cs.revision.io.RevisionDocumentReader;
 import edu.pitt.lrdc.cs.revision.io.RevisionDocumentWriter;
 import edu.pitt.lrdc.cs.revision.model.ReviewDocument;
+import edu.pitt.lrdc.cs.revision.model.ReviewRevisionDocument;
 import edu.pitt.lrdc.cs.revision.model.RevisionDocument;
 
 public class MainFrameV4 extends JFrame {
@@ -37,7 +41,9 @@ public class MainFrameV4 extends JFrame {
 	private String currentPath = null;
 	private String serverAddress = "http://lrdc-apps.lrdc.pitt.edu:8080";
 	private String username = null;
-	private ReviewDocument reviewD = null;
+	private ReviewRevisionDocument reviewD = null;
+	private Hashtable<String, List<ReviewItem>> reviewTable = null;
+
 
 	public MainFrameV4() {
 		setTitle("Revision Annotation Tool");
@@ -100,6 +106,7 @@ public class MainFrameV4 extends JFrame {
 		});
 
 		itemLoadService.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
 					JTextField addressField = new JTextField(
@@ -133,6 +140,7 @@ public class MainFrameV4 extends JFrame {
 		});
 
 		itemUploadService.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				JOptionPane.showMessageDialog(MainFrameV4.this,
 						uploadToService(serverAddress, username));
@@ -229,6 +237,7 @@ public class MainFrameV4 extends JFrame {
 		menuBar.add(menuHelp);
 		menuBar.add(menuDemo);
 		this.setJMenuBar(menuBar);
+		this.setExtendedState(this.getExtendedState() | this.MAXIMIZED_BOTH);
 
 	}
 
@@ -246,9 +255,7 @@ public class MainFrameV4 extends JFrame {
 		}
 		File s = response.getEntity(File.class);
 		// File ff = new File(username + ".xlsx");
-		System.out.println("Downloaded");
 		File ff = new File("Annotation_" + username + ".txt" + ".xlsx");
-		//if(ff.exists()) System.out.println(ff.delete());
 		s.renameTo(ff);
 		FileWriter fr = new FileWriter(s);
 		fr.flush();
@@ -326,10 +333,31 @@ public class MainFrameV4 extends JFrame {
 
 		File f = new File(path);
 		File parentFolder = f.getParentFile();
-		String reviewPath = parentFolder.getAbsolutePath() + "/review";
-		String rPath = findMatchedFile(f.getName(), reviewPath);
-		reviewD = ReviewProcessor.readReviewDocument(rPath);
-
+		String reviewPath = parentFolder.getAbsolutePath() + "/reviews";
+		String reviewLinkPath = parentFolder.getAbsolutePath() + "/reviewlinking";
+		String rPath = findMatchedFile(f.getName(), reviewLinkPath);
+		if(rPath!=null)
+			reviewD = ReviewProcessor.readReviewDocument(rPath);
+		else 
+			reviewD = null;
+		
+		if(reviewD == null) {
+			reviewD = new ReviewRevisionDocument();
+			String fileName = f.getName();
+			if (fileName.contains("Annotation_")) {
+				fileName = fileName.replaceAll("Annotation_", "");
+			}
+			if (fileName.contains("-"))
+				fileName = fileName.substring(0, fileName.indexOf("-")).trim();
+			fileName.replaceAll("\\.txt", "");
+			fileName.replaceAll("\\.xlsx", "");
+			reviewD.setDocName(reviewLinkPath+"/"+fileName + ".xlsx");
+		}
+		String lPath = findMatchedFile(f.getName(), reviewPath);
+		if(lPath!=null) 
+			reviewTable = ReviewAnnotationReader.readReviewItems(lPath);
+		
+		
 		getContentPane().setLayout(
 				new BoxLayout(getContentPane(), BoxLayout.X_AXIS));
 		/*
@@ -340,11 +368,11 @@ public class MainFrameV4 extends JFrame {
 		 * contentPane.add(tabbedPane);
 		 */
 		if (panel == null) {
-			panel = new AdvBaseLevelPanelV4(rd, reviewD);
+			panel = new AdvBaseLevelPanelV4(rd, reviewD, reviewTable);
 			// this.add(panel);
 		} else {
 			this.remove(panel);
-			panel = new AdvBaseLevelPanelV4(rd, reviewD);
+			panel = new AdvBaseLevelPanelV4(rd, reviewD, reviewTable);
 			// this.add(panel);
 		}
 		// String[] drafts = rd.regenerateDrafts();
@@ -366,6 +394,8 @@ public class MainFrameV4 extends JFrame {
 	public boolean export(String path) {
 		try {
 			RevisionDocumentWriter.writeToDoc(this.rd, path);
+			String json = RevisionMapFileGenerator.generateJson(this.rd);
+			FileUtils.writeStringToFile(new File(path+".json"), json);
 		} catch (Exception exp) {
 			exp.printStackTrace();
 			return false;

@@ -2,6 +2,8 @@ package edu.pitt.lrdc.cs.revision.gui;
 
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -9,15 +11,16 @@ import java.util.Iterator;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.JTextField;
 
 import edu.pitt.lrdc.cs.revision.model.RevisionOp;
 import edu.pitt.lrdc.cs.revision.model.RevisionPurpose;
 import edu.pitt.lrdc.cs.revision.model.RevisionUnit;
+import edu.pitt.lrdc.cs.revision.model.SubsententialRevisionUnit;
 
 public class AnnotateBox extends JPanel{
 	private JLabel statusDisplay = new JLabel("--------------------------------");
@@ -37,6 +40,31 @@ public class AnnotateBox extends JPanel{
 		table.put(purposeName, new EditUnitV2(purposeName,ColorConstants.getColor(RevisionPurpose.PRECISION)));
 		purposeName = RevisionPurpose.getPurposeName(RevisionPurpose.UNKNOWN);
 		table.put(purposeName, new EditUnitV2(purposeName,ColorConstants.getColor(RevisionPurpose.UNKNOWN)));
+		purposeName = RevisionPurpose.getPurposeName(RevisionPurpose.UNANNOTATED);
+		table.put(purposeName, new EditUnitV2(purposeName,ColorConstants.getColor(RevisionPurpose.UNANNOTATED)));
+		
+		//force selecting only one check box
+		Iterator<String> it = table.keySet().iterator();
+		while(it.hasNext()) {
+			JCheckBox check = table.get(it.next()).checkBox;
+			check.addItemListener(new ItemListener() {
+				
+				@Override
+				public void itemStateChanged(ItemEvent e) {
+			        JCheckBox chk = (JCheckBox)e.getItem();
+					if (chk.isSelected()) {
+						Iterator<String> it2 = table.keySet().iterator();
+			    		while(it2.hasNext()) {
+			    			JCheckBox cb = table.get(it2.next()).checkBox;
+			    			if (cb != chk) {
+			    				cb.setSelected(false);
+			    			}
+			    		}
+			        }
+				}
+			});
+			
+		}
 	}
 	
 	public void display(String text) {
@@ -102,6 +130,7 @@ public class AnnotateBox extends JPanel{
 		add(contentEUGroup);
 	}
 	
+	@Override
 	public void setEnabled(boolean enabled) {
 		Iterator<String> it = table.keySet().iterator();
 		while(it.hasNext()) {
@@ -125,6 +154,32 @@ public class AnnotateBox extends JPanel{
 		}
 	}
 	
+	public void reload(SubsententialRevisionUnit sru) {
+		Iterator<String> it = table.keySet().iterator();
+		while(it.hasNext()) {
+			table.get(it.next()).reload(-1);
+		}
+		
+		if (sru != null)
+		{
+			String name = RevisionPurpose.getPurposeName(sru.RevisionPurpose());
+			table.get(name).reload(sru.RevisionOperation());
+		}
+	}
+
+	public void reload(int rp) {
+		Iterator<String> it = table.keySet().iterator();
+		while(it.hasNext()) {
+			table.get(it.next()).reload(-1);
+		}
+		
+		if (rp != -1)
+		{
+			String name = RevisionPurpose.getPurposeName(rp);
+			table.get(name).reload(RevisionOp.ADD);
+		}
+	}
+
 	public ArrayList<SelectionUnit> getSelectedUnits() {
 		ArrayList<SelectionUnit> sus = new ArrayList<SelectionUnit>();
 		

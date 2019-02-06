@@ -5,31 +5,31 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
-import org.deeplearning4j.models.word2vec.Word2Vec;
-import org.nd4j.linalg.api.ndarray.INDArray;
+//import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
+//import org.deeplearning4j.models.word2vec.Word2Vec;
+//import org.nd4j.linalg.api.ndarray.INDArray;
 
 import edu.pitt.cs.revision.machinelearning.FeatureName;
 import edu.pitt.lrdc.cs.revision.model.RevisionDocument;
 
 public class SentenceEmbeddingFeatureExtractor {
 	private static SentenceEmbeddingFeatureExtractor instance;
-	private Word2Vec w2v;
+//	private Word2Vec w2v;
 	private String path = "C:\\Not Backed Up\\word2vec\\GoogleNews-vectors-negative300.bin.gz";
 	private int dimension = 300;
 	HashSet<String> stopWords = new HashSet<String>();
 
-	public Word2Vec getW2v() {
+/*	public Word2Vec getW2v() {
 		return w2v;
 	}
-
+*/
 	private SentenceEmbeddingFeatureExtractor() throws IOException {
 		System.err.println("Loading vectors:");
 		long time1 = System.currentTimeMillis();
 		File gModel = new File(path);
-		w2v = (Word2Vec) WordVectorSerializer.loadGoogleModel(gModel, true);
+		//w2v = (Word2Vec) WordVectorSerializer.loadGoogleModel(gModel, true);
 
-		List<String> stopWordsList = w2v.getStopWords();
+		List<String> stopWordsList = new ArrayList<String>(); //w2v.getStopWords();
 		System.err.println("Stop Words size:" + stopWordsList.size());
 		for (String stopWord : stopWordsList) {
 			stopWords.add(stopWord);
@@ -519,7 +519,7 @@ public class SentenceEmbeddingFeatureExtractor {
 	}
 
 	public double calculateSim(String sentence1, String sentence2) {
-		if (sentence1 == null || sentence2 == null)
+/*		if (sentence1 == null || sentence2 == null)
 			return 0;
 		String[] oldTokens = sentence1.split(" ");
 		String[] newTokens = sentence2.split(" ");
@@ -554,6 +554,8 @@ public class SentenceEmbeddingFeatureExtractor {
 		}
 
 		return calculateCosine(s1Array, s2Array);
+*/	
+		return 0.0;
 	}
 
 	public double calculateCosine(double[] s1, double[] s2) {
@@ -642,7 +644,7 @@ public class SentenceEmbeddingFeatureExtractor {
 	public void extractFeature(FeatureName features, Object[] featureVector,
 			RevisionDocument doc, ArrayList<Integer> newIndexes,
 			ArrayList<Integer> oldIndexes) {
-		String oldSentence = "";
+/*		String oldSentence = "";
 		String newSentence = "";
 		for (Integer oldIndex : oldIndexes) {
 			oldSentence += doc.getOldSentence(oldIndex) + " ";
@@ -696,6 +698,7 @@ public class SentenceEmbeddingFeatureExtractor {
 		// newFeaturesAvg);
 		// extractSubtractAVG(features, featureVector, oldFeaturesAvg,
 		// newFeaturesAvg);
+*/
 	}
 
 	public static void main(String[] args) throws IOException {

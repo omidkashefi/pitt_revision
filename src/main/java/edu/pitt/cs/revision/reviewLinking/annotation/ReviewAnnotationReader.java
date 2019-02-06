@@ -24,11 +24,11 @@ public class ReviewAnnotationReader {
 	public static List<String> getValues(Element eElement) {
 		List<String> values = new ArrayList<String>();
 		NodeList list = eElement.getElementsByTagName("Node");
-		for(int li = 0;li<list.getLength();li++) {
+		for (int li = 0; li < list.getLength(); li++) {
 			Node ee = list.item(li);
-			Element eeElement = (Element)ee;
-			//System.out.println(eeElement.getAttribute("id"));
-			values.add(eeElement.getNextSibling().getTextContent());
+			Element eeElement = (Element) ee;
+			// System.out.println(eeElement.getAttribute("id"));
+			values.add(eeElement.getNextSibling().getNodeValue());
 		}
 		return values;
 	}
@@ -45,7 +45,7 @@ public class ReviewAnnotationReader {
 				endIndex = i;
 			}
 		}
-		
+
 		StringBuffer sb = new StringBuffer();
 		for (int index = startIndex; index < endIndex; index++) {
 			sb.append(values.get(index));
@@ -58,12 +58,33 @@ public class ReviewAnnotationReader {
 		int start = 1;
 		while (start < cbrs.size()) {
 			if (startIndex < locs.get(start)) {
-				return cbrs.get(start-1);
+				return cbrs.get(start - 1);
 			} else {
 				start++;
 			}
 		}
 		return cbrs.get(cbrs.size() - 1);
+	}
+
+	public static Hashtable<String, List<ReviewItem>> readReviewItems(
+			String fileName) {
+		List<CommentBoxReview> cbrs = readReviews(fileName);
+		Hashtable<String, List<ReviewItem>> table = new Hashtable<String, List<ReviewItem>>();
+		for (CommentBoxReview cbr : cbrs) {
+			List<ReviewItem> reviews = cbr.getReviews();
+			for (ReviewItem review : reviews) {
+				String reviewType = review.getType();
+				List<ReviewItem> entry;
+				if (table.containsKey(reviewType)) {
+					entry = table.get(reviewType);
+				} else {
+					entry = new ArrayList<ReviewItem>();
+					table.put(reviewType, entry);
+				}
+				entry.add(review);
+			}
+		}
+		return table;
 	}
 
 	public static List<CommentBoxReview> readReviews(String fileName) {
@@ -80,7 +101,7 @@ public class ReviewAnnotationReader {
 			List<String> reviewStrs = null;
 			for (int temp = 0; temp < textList.getLength(); temp++) {
 				Node nNode = textList.item(temp);
-				Element eElement = (Element)nNode;
+				Element eElement = (Element) nNode;
 				reviewStrs = getValues(eElement);
 			}
 
@@ -145,12 +166,15 @@ public class ReviewAnnotationReader {
 						for (int fIndex = 0; fIndex < features.getLength(); fIndex++) {
 							Node feature = features.item(fIndex);
 							Element fElement = (Element) feature;
-							String name = fElement.getElementsByTagName("Name")
-									.item(0).getTextContent();
+
+							Element subElement = (Element) fElement
+									.getElementsByTagName("Name").item(0);
+							String name = subElement.getFirstChild()
+									.getNodeValue();
 							if (name.equals("reviewType")) {
-								String value = fElement
-										.getElementsByTagName("Value").item(0)
-										.getTextContent();
+								String value = ((Element) (fElement
+										.getElementsByTagName("Value").item(0)))
+										.getFirstChild().getNodeValue();
 								item.setType(value);
 								getReview(boxReviews, locsInt, startIndex)
 										.addReview(item);
@@ -174,25 +198,47 @@ public class ReviewAnnotationReader {
 
 			// Assigning targets and solutions to reviews
 			for (ReviewTarget rt : targets) {
-				getReview(boxReviews, locsInt, rt.getStart()).getReview(
-						rt.getStart(), rt.getEnd()).addTarget(rt);
+				CommentBoxReview cbr = getReview(boxReviews, locsInt,
+						rt.getStart());
+				if (cbr != null) {
+					ReviewItem ri = cbr.getReview(rt.getStart(), rt.getEnd());
+					if (ri != null)
+						ri.addTarget(rt);
+					else {
+						System.err.println("Review item not found:"
+								+ rt.getStart() + "," + rt.getEnd());
+					}
+				} else {
+					System.err.println("CBR not found:" + rt.getStart());
+				}
 			}
 			for (ReviewSolution rs : solutions) {
-				getReview(boxReviews, locsInt, rs.getStart()).getReview(
-						rs.getStart(), rs.getEnd()).addSolution(rs);
+				CommentBoxReview cbr = getReview(boxReviews, locsInt,
+						rs.getStart());
+				if (cbr != null) {
+					ReviewItem ri = cbr.getReview(rs.getStart(), rs.getEnd());
+					if (ri != null)
+						ri.addSolution(rs);
+					else {
+						System.err.println("Review item not found:"
+								+ rs.getStart() + "," + rs.getEnd());
+					}
+				} else {
+					System.err.println("CBR not found:" + rs.getStart());
+				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+
 		return boxReviews;
 	}
-	
+
 	public static void main(String[] args) {
-		//test
+		// test
 		List<CommentBoxReview> cbrs = readReviews("C:\\Not Backed Up\\data\\reviewAnnotation\\Bananaphone.xlsx.txt.xml");
-		for(CommentBoxReview cbr: cbrs) {
-			System.out.println("BOX REVIEW:\n"+cbr+"\n");
+		for (CommentBoxReview cbr : cbrs) {
+			System.out.println("BOX REVIEW:\n" + cbr + "\n");
 		}
 	}
 }

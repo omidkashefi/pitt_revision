@@ -18,7 +18,7 @@ import edu.pitt.cs.revision.batch.BatchFeatureReader;
 import edu.pitt.cs.revision.batch.BatchFeatureWriter;
 import edu.pitt.cs.revision.batch.InfoStore;
 import edu.pitt.cs.revision.batch.SentenceInfo;
-import edu.pitt.cs.revision.joint.EditStep;
+//import edu.pitt.cs.revision.joint.EditStep;
 import edu.pitt.cs.revision.machinelearning.FeatureName;
 import edu.pitt.cs.revision.machinelearning.JOrthoAssist;
 import edu.pitt.cs.revision.machinelearning.StanfordParserAssist;
@@ -333,7 +333,8 @@ public class SequenceFeatureExtractor {
 					int start = doc.getFirstOfNewParagraph(paragraphNo);
 					int end = doc.getLastOfNewParagraph(paragraphNo);
 					val_par = (first - start) * 1.0 / (end - start);
-					val_whole = paragraphNo * 1.0 / doc.getOldParagraphNum();
+					if(end == start) val_par = 0.0;
+					val_whole = paragraphNo * 1.0 / doc.getNewParagraphNum();
 
 					if (paragraphNo == 1) {
 						featureVector[LOC_ISFIRSTPAR] = Boolean.toString(true);
@@ -388,7 +389,8 @@ public class SequenceFeatureExtractor {
 				int start = doc.getFirstOfOldParagraph(paragraphNo);
 				int end = doc.getLastOfOldParagraph(paragraphNo);
 				val_par_old = (first - start) * 1.0 / (end - start);
-				val_whole_old = paragraphNo * 1.0 / doc.getNewParagraphNum();
+				if(end == start) val_par_old = 0;
+				val_whole_old = paragraphNo * 1.0 / doc.getOldParagraphNum();
 
 				if (paragraphNo == 1) {
 					featureVector[LOC_ISFIRSTPAR] = Boolean.toString(true);

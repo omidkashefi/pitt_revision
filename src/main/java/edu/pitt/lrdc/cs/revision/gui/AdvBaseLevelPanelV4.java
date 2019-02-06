@@ -1,30 +1,15 @@
 package edu.pitt.lrdc.cs.revision.gui;
 
-/**
- * 
- * @author zhangfan
- * 
- * version 3.0 
- * put the old draft and new draft in one tab
- * 
- * This version aligns the sentences
- */
-import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 
 import java.util.*;
 
+import edu.pitt.cs.revision.reviewLinking.ReviewItem;
 import edu.pitt.lrdc.cs.revision.model.ReviewDocument;
+import edu.pitt.lrdc.cs.revision.model.ReviewRevisionDocument;
 import edu.pitt.lrdc.cs.revision.model.RevisionDocument;
 import edu.pitt.lrdc.cs.revision.model.RevisionOp;
 import edu.pitt.lrdc.cs.revision.model.RevisionUnit;
@@ -35,7 +20,9 @@ public class AdvBaseLevelPanelV4 extends JPanel implements LevelPanel {
 	JSplitPane splitPane;
 
 	RevisionDocument doc; // Data model
-	ReviewDocument reviewDoc;
+	ReviewRevisionDocument reviewDoc;
+	Hashtable<String, List<ReviewItem>> reviewTable;
+
 	JButton changeAlignmentButton; // Change alignment
 	JButton reviewAlignmentButton;
 	JPanel buttonPanel;
@@ -64,8 +51,9 @@ public class AdvBaseLevelPanelV4 extends JPanel implements LevelPanel {
 
 	// ArrayList<Integer> currentOldSentenceIndex;
 	// ArrayList<Integer> currentNewSentenceIndex;
+	@Override
 	public void registerRevision() {
-		ArrayList<SelectionUnit> sus = annotateBox.getSelectedUnits();
+		//ArrayList<SelectionUnit> sus = annotateBox.getSelectedUnits();
 		if (currentRU == null || currentRU.size() == 0) {
 			// do nothing
 			System.err.println("Do nothing");
@@ -79,14 +67,15 @@ public class AdvBaseLevelPanelV4 extends JPanel implements LevelPanel {
 			// the new units will be registered and the old units will be
 			// removed
 
+			RevisionUnit annotatedRU = annotateContentDetail.getAnnotations();
+
 			// First remove the unexisting old
 			for (RevisionUnit ru : currentRU) {
 				boolean isExist = false;
-				for (SelectionUnit su : sus) {
-					if (su.revision_purpose == ru.getRevision_purpose()) {
-						isExist = true;
-						break;
-					}
+				if (annotatedRU.getRevision_purpose() == ru.getRevision_purpose() &&
+					annotatedRU.getSubsententialUnits().equals(ru.getSubsententialUnits())) {
+					isExist = true;
+					break;
 				}
 				if (!isExist) {
 					ru.setAbandoned();
@@ -94,53 +83,54 @@ public class AdvBaseLevelPanelV4 extends JPanel implements LevelPanel {
 			}
 
 			// Now add the new stuff
-			for (SelectionUnit su : sus) {
-				boolean isExist = false;
-				for (RevisionUnit ru : currentRU) {
-					if (su.revision_purpose == ru.getRevision_purpose()) {
-						isExist = true;
-						break;
-					}
-				}
-				if (!isExist) {
-					RevisionUnit newUnit = new RevisionUnit(doc.getRoot());
-					newUnit.setOldSentenceIndex(oldSentenceIndex);
-					newUnit.setRevision_op(RevisionOp.MODIFY);
-					if (oldSentenceIndex != null
-							&& oldSentenceIndex.size() != 0) {
-						String oldSentence = "";
-						for (Integer oldIndex : oldSentenceIndex) {
-							if (oldIndex != -1)
-								oldSentence += doc.getOldSentence(oldIndex)
-										+ "\n";
-						}
-						newUnit.setOldSentence(oldSentence);
-					} else {
-						newUnit.setRevision_op(RevisionOp.ADD);
-					}
-					newUnit.setNewSentenceIndex(newSentenceIndex);
-					if (newSentenceIndex != null
-							&& newSentenceIndex.size() != 0) {
-						String newSentence = "";
-						for (Integer newIndex : newSentenceIndex) {
-							if (newIndex != -1)
-								newSentence += doc.getNewSentence(newIndex)
-										+ "\n";
-						}
-						newUnit.setNewSentence(newSentence);
-					} else {
-						newUnit.setRevision_op(RevisionOp.DELETE);
-					}
-					// newUnit.setRevision_op(su.revision_op);
-					newUnit.setRevision_purpose(su.revision_purpose);
-
-					newUnit.setRevision_level(0);
-					newUnit.setRevision_index(doc.getRoot()
-							.getNextIndexAtLevel(0));
-					doc.getRoot().addUnit(newUnit);
-					wrapper.changePurpose(newUnit);
+			boolean isExist = false;
+			for (RevisionUnit ru : currentRU) {
+				if (annotatedRU.getRevision_purpose() == ru.getRevision_purpose() &&
+					annotatedRU.getSubsententialUnits().equals(ru.getSubsententialUnits())) {
+					isExist = true;
+					break;
 				}
 			}
+			if (!isExist) {
+				RevisionUnit newUnit = new RevisionUnit(doc.getRoot());
+				newUnit.setOldSentenceIndex(oldSentenceIndex);
+				newUnit.setRevision_op(RevisionOp.MODIFY);
+				if (oldSentenceIndex != null
+						&& oldSentenceIndex.size() != 0) {
+					String oldSentence = "";
+					for (Integer oldIndex : oldSentenceIndex) {
+						if (oldIndex != -1)
+							oldSentence += doc.getOldSentence(oldIndex)
+									+ "\n";
+					}
+					newUnit.setOldSentence(oldSentence);
+				} else {
+					newUnit.setRevision_op(RevisionOp.ADD);
+				}
+				newUnit.setNewSentenceIndex(newSentenceIndex);
+				if (newSentenceIndex != null
+						&& newSentenceIndex.size() != 0) {
+					String newSentence = "";
+					for (Integer newIndex : newSentenceIndex) {
+						if (newIndex != -1)
+							newSentence += doc.getNewSentence(newIndex)
+									+ "\n";
+					}
+					newUnit.setNewSentence(newSentence);
+				} else {
+					newUnit.setRevision_op(RevisionOp.DELETE);
+				}
+				// newUnit.setRevision_op(su.revision_op);
+				newUnit.setRevision_purpose(annotatedRU.getRevision_purpose());
+				//add subsentential units
+				newUnit.setSubsententialUnits(annotatedRU.getSubsententialUnits());
+
+				newUnit.setRevision_level(0);
+				newUnit.setRevision_index(doc.getRoot().getNextIndexAtLevel(0));
+				doc.getRoot().addUnit(newUnit);
+				wrapper.changePurpose(newUnit);
+			}
+
 		}
 		doc.check();
 		doc.getRoot().clear();
@@ -187,9 +177,12 @@ public class AdvBaseLevelPanelV4 extends JPanel implements LevelPanel {
 	 * /2); } }); }
 	 */
 
-	public AdvBaseLevelPanelV4(RevisionDocument doc, ReviewDocument reviewDoc) {
+	public AdvBaseLevelPanelV4(RevisionDocument doc,
+			ReviewRevisionDocument reviewDoc,
+			Hashtable<String, List<ReviewItem>> reviewTable) {
 		this.doc = doc;
 		this.reviewDoc = reviewDoc;
+		this.reviewTable = reviewTable;
 		wrapper = new ColoredListWrapperV2(this);
 		// ListSelectionHandler listHandler = new ListSelectionHandler();
 		// sentenceList.getSelectionModel().addListSelectionListener(listHandler);
@@ -199,8 +192,8 @@ public class AdvBaseLevelPanelV4 extends JPanel implements LevelPanel {
 		newSentenceList = wrapper.getNewSentenceList();
 		wrapper.paint();
 		JScrollPane pane = new JScrollPane(sentenceList,
-				JScrollPane.VERTICAL_SCROLLBAR_NEVER,
-				JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+				ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
+				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
 		JScrollPane newPane = new JScrollPane(newSentenceList);
 		JScrollBar sBar2 = pane.getVerticalScrollBar();
 		sBar2.setModel(newPane.getVerticalScrollBar().getModel());
@@ -230,7 +223,7 @@ public class AdvBaseLevelPanelV4 extends JPanel implements LevelPanel {
 		sentenceBox.add(newPane);
 		// sentenceBox.add(splitPane);
 		// sentenceBox.add(splitScroll);
-		annotateContentDetail = new ContentBox(BoxLayout.Y_AXIS);
+		annotateContentDetail = new ContentBox(BoxLayout.Y_AXIS, this);
 		// levelPanel = new LevelDemoPanel(doc, 0);
 		// levelPanel.boundPanel(this);
 		this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -336,17 +329,15 @@ public class AdvBaseLevelPanelV4 extends JPanel implements LevelPanel {
 	}
 
 	public void showReviews() {
-		HashSet<String> reviewStrs = reviewDoc.getReviewStrs(
-				wrapper.getOldSelectedIndexes(),
-				wrapper.getNewSelectedIndexes());
-		if (reviewStrs == null || reviewStrs.size() == 0) {
-			annotateBox.displayReviews("No reviews aligned");
-		} else {
-			String txt = "";
-			for (String reviewStr : reviewStrs) {
-				txt += reviewStr.trim() + "\n";
+		if (reviewDoc != null) {
+			String reviewStr = reviewDoc.getRelatedReviewStr(
+					wrapper.getOldSelectedIndexes(),
+					wrapper.getNewSelectedIndexes());
+			if (reviewStr == null || reviewStr.length() == 0) {
+				annotateBox.displayReviews("No reviews aligned");
+			} else {
+				annotateBox.displayReviews(reviewStr);
 			}
-			annotateBox.displayReviews(txt);
 		}
 	}
 
@@ -365,11 +356,16 @@ public class AdvBaseLevelPanelV4 extends JPanel implements LevelPanel {
 		// ArrayList<Integer> newIndiceArr = wrapper.getNewSelectedIndexes();
 		// AlignmentChangePanel acp = new AlignmentChangePanel(doc,
 		// oldIndiceArr, newIndiceArr);
-
-		ReviewChangePanel acp = new ReviewChangePanel(reviewDoc,
-				wrapper.getOldSelectedIndexes(),
-				wrapper.getNewSelectedIndexes());
-		frame.setContentPane(acp);
-		frame.show();
+		if (reviewTable != null) {
+			ReviewChangePanel acp = new ReviewChangePanel(doc, reviewDoc,
+					wrapper.getOldSelectedIndexes(),
+					wrapper.getNewSelectedIndexes(),reviewTable);
+			frame.setContentPane(acp);
+			frame.show();
+		} else {
+			JOptionPane.showMessageDialog(this,
+					"Does not have reviews assigned", "Error",
+					JOptionPane.ERROR_MESSAGE);
+		}
 	}
 }

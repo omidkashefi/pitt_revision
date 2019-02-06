@@ -407,6 +407,82 @@ public class RevisionPurposeClassifier {
 		return data;
 	}
 
+	public void addPurposeClasses5Class(ArrayList<String> categories, int option) {
+		if (option == 3) {
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CLAIMS_IDEAS));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.EVIDENCE));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.SURFACE));
+		} else if (option == 1) {
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CLAIMS_IDEAS));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.SURFACE));
+		} else if (option == 2) {
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CLAIMS_IDEAS));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.SURFACE));
+		} else if (option == 4) {
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CLAIMS_IDEAS));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_WARRANT_REASONING_BACKING));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.EVIDENCE));
+			categories
+					.add(RevisionPurpose
+							.getPurposeName(RevisionPurpose.CD_GENERAL_CONTENT_DEVELOPMENT));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.CD_REBUTTAL_RESERVATION));
+			categories.add(RevisionPurpose
+					.getPurposeName(RevisionPurpose.SURFACE));
+		}
+	}
+
+	
+	public Instances createInstancesSOLO5Class(ArrayList<RevisionDocument> docs,
+			boolean usingNgram,int option, int remove) throws Exception {
+		FeatureExtractor fe = new FeatureExtractor();
+		fe.setOnline(true);
+		// fe.openBatchMode(batchPath);
+		WekaAssist wa = new WekaAssist();
+		ArrayList<String> categories = new ArrayList<String>();
+		// categories.add(SURFACE_CHANGE);
+		// categories.add(CONTENT_CHANGE);
+		addPurposeClasses5Class(categories, option);
+		fe.buildFeatures(usingNgram, categories,remove);
+		Instances data = wa.buildInstances(fe.features, usingNgram);
+		for (RevisionDocument doc : docs) {
+			ArrayList<ArrayList<ArrayList<Integer>>> pairs = doc
+					.getAlignedIndices();
+			for (ArrayList<ArrayList<Integer>> pair : pairs) {
+				ArrayList<Integer> oldIndices = pair.get(0);
+				ArrayList<Integer> newIndices = pair.get(1);
+				Object[] features = fe.extractFeatures(doc, newIndices,
+						oldIndices, usingNgram,remove);
+				String ID = RevisionPurposePredicter.generateID(doc,
+						newIndices, oldIndices);
+				wa.addInstance(features, fe.features, usingNgram, data,
+						RevisionPurpose
+								.getPurposeName(RevisionPurpose.CLAIMS_IDEAS),
+						ID);
+			}
+		}
+		return data;
+	}
 	
 	public Instances createInstancesSOLO5Class(ArrayList<RevisionDocument> docs,
 			boolean usingNgram,int option) throws Exception {
@@ -1435,8 +1511,8 @@ public class RevisionPurposeClassifier {
 
 		Instances testData = wa.buildInstances(fe.features, usingNgram);
 
-		// int buildOp = ALLOP;
-		int buildOp = MODIFYOPONLY;
+		 int buildOp = ALLOP;
+		//buildOp = MODIFYOPONLY;
 		// Collect all the revision units
 		// ArrayList<RevisionUnit> rus = new ArrayList<RevisionUnit>();
 		for (RevisionDocument doc : trainDocs) {

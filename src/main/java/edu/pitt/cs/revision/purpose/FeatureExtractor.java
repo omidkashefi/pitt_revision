@@ -18,7 +18,7 @@ import edu.pitt.cs.revision.batch.BatchFeatureReader;
 import edu.pitt.cs.revision.batch.BatchFeatureWriter;
 import edu.pitt.cs.revision.batch.InfoStore;
 import edu.pitt.cs.revision.batch.SentenceInfo;
-import edu.pitt.cs.revision.joint.EditStep;
+//import edu.pitt.cs.revision.joint.EditStep;
 import edu.pitt.cs.revision.machinelearning.FeatureName;
 import edu.pitt.cs.revision.machinelearning.JOrthoAssist;
 import edu.pitt.cs.revision.machinelearning.StanfordParserAssist;
@@ -2124,7 +2124,7 @@ public class FeatureExtractor {
 		}
 		if (option == 4 || option == 10 || option == 11 || option == 2
 				|| option == 3) {
-			extractFeaturesPriorPost(doc, newIndexes, oldIndexes, 1);
+			//extractFeaturesPriorPost(doc, newIndexes, oldIndexes, 1);
 		}
 		return featureVector;
 		// String sentence = extractSentence(doc, ru);
@@ -2162,7 +2162,7 @@ public class FeatureExtractor {
 			insertTextGroup();
 		if (remove == 2 || remove == 10 || remove == 22 ) {
 			//PDTBFeatureExtractor.getInstance().insertARG1ARG2(features);
-			PDTBFeatureExtractorV2.getInstance().insertFeature(features);
+			//PDTBFeatureExtractorV2.getInstance().insertFeature(features);
 		}
 		if (remove == 10 || remove == 23 || remove == 8 ) {
 			//PDTBFeatureExtractor.getInstance().insertARG1ARG2(features);
@@ -2408,9 +2408,9 @@ public class FeatureExtractor {
 			ArrayList<Integer> oldSents = ru.getOldSentenceIndex();
 			
 		
-			PDTBFeatureExtractorV2.getInstance().extractFeature(features,
+			/*PDTBFeatureExtractorV2.getInstance().extractFeature(features,
 					featureVector, doc, newSents,
-					oldSents);
+					oldSents);*/
 			/*PDTBFeatureExtractorV2.getInstance().extractFeatureARG1ARG2(features,
 					featureVector, doc, ru.getNewSentenceIndex(),
 					ru.getOldSentenceIndex());*/
